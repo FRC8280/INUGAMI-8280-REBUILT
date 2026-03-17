@@ -17,8 +17,8 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.networktables.BooleanSubscriber;
-import edu.wpi.first.networktables.NetworkTableInstance;
+//import edu.wpi.first.networktables.BooleanSubscriber;
+//import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -57,7 +57,7 @@ public class Shooter extends SubsystemBase{
 
     ServoHubConfig config;
     public final HoodSystem m_Hood;
-    private final BooleanSubscriber labShooter;
+    //private final BooleanSubscriber labShooter;
     private final NeutralOut neutralOut = new NeutralOut();
     private final Supplier<LEDSubsystem> m_ledSupplier;
     private double lastLoopTime = Timer.getFPGATimestamp();
@@ -71,9 +71,9 @@ public class Shooter extends SubsystemBase{
         m_ShooterLookup = new ShooterLookup();
         velocityRequest = new VelocityVoltage(0).withSlot(0);
 
-        labShooter = NetworkTableInstance.getDefault()
+        /*labShooter = NetworkTableInstance.getDefault()
             .getBooleanTopic("/Elastic/EnableShooter")
-            .subscribe(false);
+            .subscribe(false);*/
 
         m_ShooterMotor = new TalonFX(ShooterConstants.kShooterMotorId);
         m_FollowerMotor = new TalonFX(ShooterConstants.kFollowerMotorId);

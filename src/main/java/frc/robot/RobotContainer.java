@@ -6,7 +6,6 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.util.Queue;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -25,7 +24,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -116,19 +114,13 @@ public class RobotContainer {
 
     private final double deadzone = 0.10; // Adjust this value as needed
 
-    // deadbands for driver intent
-    private static final double TRANS_DEADBAND = 0.10;
-    private static final double ROT_DEADBAND = 0.10;
-
     // Example axis suppliers (adjust for your controller)
     private final DoubleSupplier xAxis = () -> -driver.getLeftY(); // forward/back
     private final DoubleSupplier yAxis = () -> -driver.getLeftX(); // strafe
     private final DoubleSupplier rAxis = () -> -driver.getRightX(); // manual rotate
 
     private final Timer m_warmupTimer = new Timer();
-    private static final double kWarmupSeconds = Constants.kWarmupSeconds; // adjust or move to ShooterConstants if
-                                                                           // preferred
-
+    
     private Command autoAimCommand = null;
 
     private boolean driverOverride() {

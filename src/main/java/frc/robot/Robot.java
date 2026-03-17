@@ -8,9 +8,7 @@ import com.ctre.phoenix6.HootAutoReplay;
 import com.ctre.phoenix6.Utils;
 
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -22,7 +20,6 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
 import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
-import com.ctre.phoenix6.hardware.Pigeon2;
 
 public class Robot extends TimedRobot {
     private boolean secondLimeLight = true;
