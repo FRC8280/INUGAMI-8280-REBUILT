@@ -25,7 +25,7 @@ import dev.doglog.DogLogOptions;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
 public class Robot extends TimedRobot {
-    private boolean secondLimeLight = false;
+    private boolean secondLimeLight = true;
     private double lastLoopTime = Timer.getFPGATimestamp();
     private final Field2d m_field = new Field2d();
 

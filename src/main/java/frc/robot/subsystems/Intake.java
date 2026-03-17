@@ -61,9 +61,9 @@ public class Intake extends SubsystemBase {
 
         Slot0Configs intakeGains = PivotConfigs.Slot0;
         intakeGains.kG = 0.01; // Add 0.5 V output to overcome gravity at the pivot's center of mass
-        intakeGains.kP = 0.12;//20 // A position error of 2.5 rotations results in 12 V output
+        intakeGains.kP = 0.075;//20 // A position error of 2.5 rotations results in 12 V output
         intakeGains.kI = 0; // no output for integrated error
-        intakeGains.kD = 0.75; // A velocity error of 1 rps results in 0.1 V output
+        intakeGains.kD = 0.05; // A velocity error of 1 rps results in 0.1 V output
 
         /*MotionMagicConfigs pivotMotionMagic = PivotConfigs.MotionMagic;
         pivotMotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity of 80 rps

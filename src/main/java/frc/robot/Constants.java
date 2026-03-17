@@ -29,8 +29,8 @@ public class Constants {
         public static final int kPivotCurrentLimit = 30;
         public static final int kPivotStatorCurrentLimit = 60;
         public static final double kPivotStowed = 0;
-        public static final double kPivotDeployed = -19.99;
-        public static final double kPivotAgitate = -8.784;
+        public static final double kPivotDeployed = -21.796;
+        public static final double kPivotAgitate = -7.683;
 
         public static final int kRollerIntakeMotorId = 12;
         public static final int kSpeed = 3000;
