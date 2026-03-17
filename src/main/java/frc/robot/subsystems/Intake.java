@@ -59,9 +59,9 @@ public class Intake extends SubsystemBase {
 
         Slot0Configs intakeGains = PivotConfigs.Slot0;
         intakeGains.kG = 0.01; // Add 0.5 V output to overcome gravity at the pivot's center of mass
-        intakeGains.kP = 0.075;//20 // A position error of 2.5 rotations results in 12 V output
+        intakeGains.kP = 0.75;//20 // A position error of 2.5 rotations results in 12 V output
         intakeGains.kI = 0; // no output for integrated error
-        intakeGains.kD = 0.05; // A velocity error of 1 rps results in 0.1 V output
+        intakeGains.kD = 0.1; // A velocity error of 1 rps results in 0.1 V output
 
         /*MotionMagicConfigs pivotMotionMagic = PivotConfigs.MotionMagic;
         pivotMotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity of 80 rps
@@ -90,7 +90,7 @@ public class Intake extends SubsystemBase {
         RollerConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         
         Slot0Configs RollerGains = RollerConfigs.Slot0;
-        RollerGains.kS = 0.1; // Add 0.25 V output to overcome static friction
+        RollerGains.kS = 0.1; // Ad-21.d 0.25 V output to overcome static friction
         RollerGains.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
         RollerGains.kP = 0.11; // An error of 1 rps results in 0.11 V output
         RollerGains.kI = 0; // no output for integrated error
