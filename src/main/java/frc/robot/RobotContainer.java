@@ -393,8 +393,10 @@ public class RobotContainer {
 
         JoystickButton intakeReverseButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.ReverseIntake);
-        intakeReverseButton.onTrue(new InstantCommand(() -> m_Intake.reverseIntake()));
-        intakeReverseButton.onFalse(new InstantCommand(() -> m_Intake.stopIntake()));
+        intakeReverseButton.onTrue(new InstantCommand(() -> m_Intake.reverseIntake())
+                           .alongWith(new InstantCommand(() -> m_Indexer.reverseIndexer())));
+        intakeReverseButton.onFalse(new InstantCommand(() -> m_Intake.stopIntake())
+                            .alongWith(new InstantCommand(() -> m_Indexer.stopIndexer())) );
 
         //Passing Controls
         JoystickButton passZone1 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone1);
