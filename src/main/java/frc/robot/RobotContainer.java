@@ -15,13 +15,16 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.FollowPathCommand;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -62,13 +65,11 @@ public class RobotContainer {
 
     enum PassingZone {
         NOT_PASSING,
-        Zone1,
-        Zone2,
-        Zone3,
-        Zone4,
-        Zone5,
-        Zone6
+        Zone_Left,
+        Zone_Right
     }
+
+    private boolean fIsAutoAiming = false;
 
     private PassingZone passingZone = PassingZone.NOT_PASSING;
     private ShootingState m_shootingState = ShootingState.IDLE;
@@ -78,7 +79,7 @@ public class RobotContainer {
     // Supplier defined here
     private final Supplier<Pose2d> drivePoseSupplier = () -> drivetrain.getState().Pose;
 
-    private final LEDSubsystem ledSystem = new LEDSubsystem();
+    public final LEDSubsystem ledSystem = new LEDSubsystem();
     private final Supplier<LEDSubsystem> ledSupplier = () -> ledSystem;
 
     private final Intake m_Intake = new Intake();
@@ -87,6 +88,7 @@ public class RobotContainer {
 
     private final Timer m_intakeCycleTimer = new Timer();
     private final Timer m_intakeDeployTimer = new Timer();
+    private final Timer teleopTimer = new Timer();
     private static final double kIntakeCycleSeconds = 1.0;
     private static final double kIntakeDeployDuration = 0.25;
     private boolean m_intakeCycleRunning = false;
@@ -120,21 +122,14 @@ public class RobotContainer {
     private final DoubleSupplier rAxis = () -> -driver.getRightX(); // manual rotate
 
     private final Timer m_warmupTimer = new Timer();
-    
+
     private Command autoAimCommand = null;
+    private Translation2d lastTarget = null;
 
     private boolean driverOverride() {
         return Math.abs(xAxis.getAsDouble()) > deadzone
                 || Math.abs(yAxis.getAsDouble()) > deadzone
                 || Math.abs(rAxis.getAsDouble()) > deadzone;
-    }
-
-    private double limelight_aim_proportional() {
-        double kP = .04375; // .035;
-        double targetingAngularVelocity = LimelightHelpers.getTX("limelight") * kP;
-        targetingAngularVelocity *= MaxAngularRate;
-        targetingAngularVelocity *= -1.0;
-        return targetingAngularVelocity;
     }
 
     /* Path follower */
@@ -144,12 +139,10 @@ public class RobotContainer {
 
         NamedCommands.registerCommand("Stop Shooter", new InstantCommand(() -> CeaseFire()));
         NamedCommands.registerCommand("Shoot", new InstantCommand(() -> StartFiringSequence()));
-
         NamedCommands.registerCommand("Deploy Intake", new InstantCommand(() -> m_Intake.deployIntake()));
         NamedCommands.registerCommand("Stow Intake", new InstantCommand(() -> m_Intake.stowIntake()));
-
-        NamedCommands.registerCommand("Aim", new InstantCommand(() -> this.ExecuteAimCommand(m_Shooter.GetAllianceHub())));
-
+        NamedCommands.registerCommand("Aim",
+                new InstantCommand(() -> this.ExecuteAimCommand(m_Shooter.GetAllianceHub())));
         NamedCommands.registerCommand("Start Intake", new InstantCommand(() -> m_Intake.startIntake()));
         NamedCommands.registerCommand("Stop Intake", new InstantCommand(() -> m_Intake.stopIntake()));
 
@@ -166,9 +159,14 @@ public class RobotContainer {
 
     }
 
+    public LEDSubsystem getLEDSystem() {
+        return ledSystem;
+    }
+
     public void periodic() {
         SmartDashboard.putNumber("PowerSystem/Voltage", powerDistributionSystem.getVoltage());
         SmartDashboard.putNumber("PowerSystem/Current", powerDistributionSystem.getTotalCurrent());
+        // countdownLED.periodic();
     }
 
     public void SetShootingSTate(ShootingState state) {
@@ -199,6 +197,7 @@ public class RobotContainer {
         return m_Shooter.IsReadyToFire() && (autoAimCommand == null || !autoAimCommand.isScheduled());
     }
 
+    // Todo - this should be inside of the intake class and not in the robot logic
     boolean fIntakeUp = false;
 
     public void toggleIntake() {
@@ -211,18 +210,18 @@ public class RobotContainer {
         }
     }
 
-    public void CeasePassing(PassingZone buttonID){
+    public void CeasePassing(PassingZone buttonID) {
 
-        if(buttonID != passingZone  )
+        if (buttonID != passingZone)
             return;
 
-        passingZone = PassingZone.NOT_PASSING;   
-        CeaseFire(); 
+        passingZone = PassingZone.NOT_PASSING;
+        CeaseFire();
     }
+
     public void CeaseFire() {
 
-        //todo: verify this logic
-        if(passingZone != PassingZone.NOT_PASSING)
+        if (passingZone != PassingZone.NOT_PASSING)
             return;
 
         // Todo stop any auto aiming system
@@ -238,7 +237,16 @@ public class RobotContainer {
         m_Intake.deployIntake();
     }
 
+    // PID for auto-aim rotational control (radians)
+    private final PIDController m_autoAimPID = new PIDController(4.0, 0.0, 0.25);
+    {
+        m_autoAimPID.enableContinuousInput(-Math.PI, Math.PI);
+        m_autoAimPID.setTolerance(Math.toRadians(2.0)); // ~2 degrees
+    }
+
     private Command ExecuteAimCommand(Translation2d target) {
+
+        lastTarget = target;
         autoAimCommand = new RotateToPointCommand(
                 drivetrain,
                 drivePoseSupplier, // robot pose supplier
@@ -258,28 +266,85 @@ public class RobotContainer {
         if (autoAimCommand != null && autoAimCommand.isScheduled()) {
             autoAimCommand.cancel();
             autoAimCommand = null;
+            lastTarget = null;
         }
     }
 
+    public void startTeleopTimer() {
+        getLEDSystem().startCountdown(10);
+        teleopTimer.stop();
+        teleopTimer.reset();
+        teleopTimer.start();
+    }
+
+    public void stopTeleopTimer() {
+        teleopTimer.stop();
+        teleopTimer.reset();
+    }
+
+    private void onTransitionChange(int eventNumber, int timeSeconds) {
+        ledSystem.startCountdown(timeSeconds); // Start a 15-second countdown on the LEDs
+
+        System.out.println("Teleop event " + eventNumber + " fired at " + timeSeconds + " seconds");
+    }
+
     double speed = 1.0;
+
     private void configureBindings() {
 
-        /*if(m_Intake.isIntakeRunning())
-            speed = 0.75; 
-        else
-            speed = 1;*/
+        /*
+         * if(m_Intake.isIntakeRunning())
+         * speed = 0.75;
+         * else
+         * speed = 1;
+         */
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
+        /*
+         * drivetrain.setDefaultCommand(
+         * // Drivetrain will execute this command periodically
+         * drivetrain.applyRequest(() -> drive.withVelocityX(-driver.getLeftY() *
+         * MaxSpeed *driveScaler ) // Drive forward with
+         * // negative Y (forward)
+         * .withVelocityY(-driver.getLeftX() * MaxSpeed * driveScaler ) // Drive left
+         * with negative X (left)
+         * .withRotationalRate(-driver.getRightX() * MaxAngularRate ) // Drive
+         * counterclockwise with
+         * 
+         * // negative X (left)
+         * ));
+         */
+
         drivetrain.setDefaultCommand(
                 // Drivetrain will execute this command periodically
-                drivetrain.applyRequest(() -> drive.withVelocityX(-driver.getLeftY() * MaxSpeed *driveScaler ) // Drive forward with
-                                                                                                 // negative Y (forward)
-                        .withVelocityY(-driver.getLeftX() * MaxSpeed * driveScaler  ) // Drive left with negative X (left)
-                        .withRotationalRate(-driver.getRightX() * MaxAngularRate  ) // Drive counterclockwise with
-                                                                               
-                        // negative X (left)
-                ));
+                drivetrain.applyRequest(() -> {
+                    // translational drive from left stick (unchanged)
+                    double vx = -driver.getLeftY() * MaxSpeed * driveScaler;
+                    double vy = -driver.getLeftX() * MaxSpeed * driveScaler;
+
+                    // default manual rotational control from right stick
+                    double rotationalRate = -driver.getRightX() * MaxAngularRate;
+
+                    // If we're auto-aiming and driver isn't commanding rotation (right stick in
+                    // deadzone),
+                    // override rotationalRate with PID output to turn toward lastTarget.
+                    /*if (fIsAutoAiming && lastTarget != null && Math.abs(driver.getRightX()) <= deadzone) {
+                        Pose2d robotPose = drivePoseSupplier.get();
+                        if (robotPose != null) {
+                            double angleToTarget = Math.atan2(lastTarget.getY() - robotPose.getY(),
+                                    lastTarget.getX() - robotPose.getX());
+                            double robotYaw = robotPose.getRotation().getRadians();
+                            // PID expects measurement,setpoint -> use yaw and desired angle
+                            double pidOut = m_autoAimPID.calculate(robotYaw, angleToTarget); // clamp to allowed angular
+                                                                                             // rate
+                            rotationalRate = MathUtil.clamp(pidOut, -MaxAngularRate, MaxAngularRate);
+                        }*/
+
+                    return drive.withVelocityX(vx)
+                            .withVelocityY(vy)
+                            .withRotationalRate(rotationalRate);
+                }));
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
@@ -300,7 +365,8 @@ public class RobotContainer {
         driver.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         // emergency servo reset
-        driver.povDown().onTrue(new InstantCommand(() -> m_Shooter.m_Hood.retractServo()));
+        //driver.povUp().onTrue(new InstantCommand(() -> m_Shooter.SetHood(15)));
+        driver.povDown().onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
 
         // Firing logic
         driver.rightTrigger().whileTrue(new InstantCommand(() -> StartFiringSequence())
@@ -320,6 +386,27 @@ public class RobotContainer {
         // Aiming logic
         driver.y().onTrue(ExecuteAimCommand(m_Shooter.GetAllianceHub()));
 
+        //Phase transitions
+        //Todo: implement warm up sequence on shooter based on phase
+        // Fire once at 10 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(10.0))
+                .onTrue(Commands.runOnce(() -> onTransitionChange(1, 30)));
+
+        // Fire once at 40 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(40.0))
+                .onTrue(Commands.runOnce(() -> onTransitionChange(2, 30)));
+        // Fire once at 70 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(70.0))
+                .onTrue(Commands.runOnce(() -> onTransitionChange(3, 30)));
+
+        // Fire once at 100 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(100.0))
+                .onTrue(Commands.runOnce(() -> onTransitionChange(4, 30)));
+
+        // Fire once at 130 seconds
+        //new Trigger(() -> teleopTimer.hasElapsed(130.0))
+        //        .onTrue(Commands.runOnce(() -> onTransitionChange(5, 130)));
+                
         // ***********************************************operator
         // controls********************************************************
         JoystickButton toggleButton = new JoystickButton(operatorStandard,
@@ -336,6 +423,12 @@ public class RobotContainer {
         shootFuelButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
                 .alongWith(ExecuteAimCommand(m_Shooter.GetAllianceHub())));
         shootFuelButton.onFalse(new InstantCommand(() -> CeaseFire()));
+
+        // set fIsAutoAiming when we are in any shooting state or in a passing zone
+        new Trigger(() -> m_shootingState != ShootingState.IDLE
+                || passingZone != PassingZone.NOT_PASSING)
+                .onTrue(new InstantCommand(() -> fIsAutoAiming = true))
+                .onFalse(new InstantCommand(() -> fIsAutoAiming = false));
 
         // While the shooter is firing, periodically bring the intake up to feed,
         // then stow it after a short deploy duration. Stops when shooter stops firing.
@@ -394,96 +487,22 @@ public class RobotContainer {
         JoystickButton intakeReverseButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.ReverseIntake);
         intakeReverseButton.onTrue(new InstantCommand(() -> m_Intake.reverseIntake())
-                           .alongWith(new InstantCommand(() -> m_Indexer.reverseIndexer())));
+                .alongWith(new InstantCommand(() -> m_Indexer.reverseIndexer())));
         intakeReverseButton.onFalse(new InstantCommand(() -> m_Intake.stopIntake())
-                            .alongWith(new InstantCommand(() -> m_Indexer.stopIndexer())) );
+                .alongWith(new InstantCommand(() -> m_Indexer.stopIndexer())));
 
-        //Passing Controls
-        JoystickButton passZone1 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone1);
-        passZone1.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone1)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(0)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone1.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone1)));
-    
-        JoystickButton passZone2 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone2);
-        passZone2.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone2)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(1)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone2.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone2)));
+        // Passing Controls
+        JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Left);
+        passZone4.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Left)
+                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(Constants.StandardOperatorControls.Left)))
+                .alongWith(new InstantCommand(() -> StartFiringSequence())));
+        passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Left)));
 
-        JoystickButton passZone3 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone3);
-        passZone3.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone3)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(2)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone3.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone3)));
-
-        JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone4);
-        passZone4.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone4)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(3)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone4)));   
-
-        JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone5);
-        passZone5.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone5)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(4)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone5)));   
-
-        JoystickButton passZone6 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Zone6);
-        passZone6.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone6)
-                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(5)))
-                .alongWith(new InstantCommand(()->StartFiringSequence())));
-        passZone6.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone6)));
-
-        // if(m_shootingState == ShootingState.FIRING || m_shootingState ==
-        // ShootingState.WARMUP)
-        /*
-         * driver.leftTrigger().onTrue(
-         * drivetrain.applyRequest(() ->
-         * drive.withVelocityX(-driver.getLeftY() * MaxSpeed)
-         * .withVelocityY(-driver.getLeftX() * MaxSpeed)
-         * .withRotationalRate(limelight_aim_proportional())));
-         * 
-         * driver.leftTrigger().onFalse(
-         * drivetrain.applyRequest(() ->
-         * drive.withVelocityX(-driver.getLeftY() * MaxSpeed)
-         * .withVelocityY(-driver.getLeftX() * MaxSpeed)
-         * .withRotationalRate(-driver.getRightX() * MaxAngularRate)));
-         */
-
-        // Call TestPreShotMotor(true) while left bumper is pressed, and
-        // TestPreShotMotor(false) when released
-        // driver.leftBumper().onTrue(new InstantCommand(() ->
-        // m_Shooter.testPreShotMotor(true)));
-        // driver.leftBumper().onFalse(new InstantCommand(() ->
-        // m_Shooter.testPreShotMotor(false)));
-
-        // Call set velocity on shooter when a button is held down.
-        // driver.a().whileTrue(new InstantCommand(() ->
-        // m_Shooter.setShooterVelocity(50*60)));
-        // driver.a().onFalse(new InstantCommand(() ->
-        // m_Shooter.setShooterVelocity(0)));
-
-        // Activate shooter + indexer while right trigger is held, stop both when
-        // released.
-        /*
-         * driver.rightTrigger().whileTrue(
-         * new InstantCommand(() -> m_Shooter.setShooterVelocity(50*60))
-         * .alongWith(new InstantCommand(() -> m_Shooter.testPreShotMotor(true)))
-         * );
-         * driver.rightTrigger().onFalse(
-         * new InstantCommand(() -> m_Shooter.setShooterVelocity(0))
-         * .alongWith(new InstantCommand(() -> m_Shooter.testPreShotMotor(false)))
-         * );
-         */
-
-        // Activate intake while Y is pressed, stop when released
-        /*
-         * driver.y().onTrue(
-         * new InstantCommand(() -> m_Intake.deployIntake()));
-         * driver.x().onFalse(
-         * new InstantCommand(() -> m_Intake.stowIntake()));
-         */
+        JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Right);
+        passZone5.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Right)
+                .alongWith(ExecuteAimCommand(m_Shooter.getPassingPose(Constants.StandardOperatorControls.Right)))
+                .alongWith(new InstantCommand(() -> StartFiringSequence())));
+        passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Right)));
 
         // Sys ID code
         /*
@@ -506,43 +525,6 @@ public class RobotContainer {
          * Direction.kReverse));
          */
 
-        // Call TestPreShotMotor(true) while A is pressed, and TestPreShotMotor(false)
-        // when released
-        /*
-         * driver.a().onTrue(new InstantCommand(() ->
-         * m_Shooter.TestPreShotMotor(true)));
-         * driver.a().onFalse(new InstantCommand(() ->
-         * m_Shooter.TestPreShotMotor(false)));
-         */
-
-        /*
-         * operator.a().onTrue(
-         * new InstantCommand(() -> m_Intake.startIntake())
-         * .alongWith(new InstantCommand(() -> m_Indexer.StartIndexer()))
-         * );
-         * 
-         * operator.b().onTrue(
-         * new InstantCommand(() -> m_Intake.reverseIntake())
-         * .alongWith(new InstantCommand(() -> m_Indexer.ReverseIndexer()))
-         * );
-         * 
-         * operator.a().onFalse(
-         * new InstantCommand(() -> m_Intake.stopIntake())
-         * .alongWith(new InstantCommand(() -> m_Indexer.StopIndexer()))
-         * );
-         * operator.b().onFalse(
-         * new InstantCommand(() -> m_Intake.stopIntake())
-         * .alongWith(new InstantCommand(() -> m_Indexer.StopIndexer()))
-         * );
-         * 
-         * 
-         * operator.leftTrigger().onTrue(new InstantCommand(() ->
-         * m_Intake.deployIntake()));
-         * operator.rightTrigger().onTrue(new InstantCommand(() ->
-         * m_Intake.stowIntake()));
-         */
-
-        // drivetrain.registerTelemetry(logger::telemeterize);
     }
 
     public Command getAutonomousCommand() {

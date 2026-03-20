@@ -23,7 +23,7 @@ public class HoodSystem extends SubsystemBase {
         m_servoHub = new ServoHub(LinearServoConstants.kServoHubId);
         m_servoHub.setBankPulsePeriod(ServoHub.Bank.kBank0_2, LinearServoConstants.kPulsePeriod);
         
-        linearServoLeft = m_servoHub.getServoChannel(ChannelId.kChannelId0);
+        linearServoLeft = m_servoHub.getServoChannel(ChannelId.kChannelId2);
         linearServoRight = m_servoHub.getServoChannel(ChannelId.kChannelId1);
 
 

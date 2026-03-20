@@ -7,6 +7,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 
 public class Constants {
 
+    public static final class LEDConstants {
+        public static final int kFrontCandleID = 50; // CAN bus ID for the CANdle
+        public static final int kTimerCandleID = 51; // CAN bus ID for the timer candle (if used)
+
+    }
+
+
     public static final boolean kVerboseDashboard = true;
     public static final double kWarmupSeconds = 4.0;
     public static final double kMaxSpeed = 1.0;
@@ -91,17 +98,11 @@ public class Constants {
         public static final double kWarmupSeconds = 2.0;
 
         public static final List<Translation2d> PASSING_POSES = List.of(
-            new Translation2d(2, 7), // 0    //blue
-            new Translation2d(2, 4), // 1
-            new Translation2d(2, 1), // 2
+            new Translation2d(2, 7), // 0   //blue left
+            new Translation2d(2, 1), // 1   //blue right
 
-            new Translation2d(6, 7), // 3   //Neutral zone
-            new Translation2d(6, 4), // 4
-            new Translation2d(6, 1), // 5
-
-            new Translation2d(14, 7), // 6  //red
-            new Translation2d(14, 4), // 7
-            new Translation2d(14, 1)  // 8
+            new Translation2d(14, 7), // 2  //red left
+            new Translation2d(14, 1)  // 3  //red right
         );
         public static Translation2d BlueHub = new Translation2d(4.85, 4.0);
         public static Translation2d RedHub = new Translation2d(11.89, 4.035);
@@ -121,12 +122,14 @@ public class Constants {
         public static final int ToggleIntake = 1;
         public static final int IntakeFuel = 2;
         public static final int ShootFuel = 3;
-        public static final int Zone4 = 4;
+        public static final int Left = 4;
+        public static final int Right = 6;
+        /*public static final int Zone4 = 4;
         public static final int Zone5 = 5;
         public static final int Zone6 = 6;
         public static final int Zone1 = 7;
         public static final int Zone2 = 8;
-        public static final int Zone3 = 9;
+        public static final int Zone3 = 9;*/
     }
 }
     

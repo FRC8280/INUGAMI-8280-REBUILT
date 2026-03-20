@@ -57,7 +57,6 @@ public class Shooter extends SubsystemBase{
 
     ServoHubConfig config;
     public final HoodSystem m_Hood;
-    //private final BooleanSubscriber labShooter;
     private final NeutralOut neutralOut = new NeutralOut();
     private final Supplier<LEDSubsystem> m_ledSupplier;
     private double lastLoopTime = Timer.getFPGATimestamp();
@@ -124,6 +123,10 @@ public class Shooter extends SubsystemBase{
     public boolean IsReadyToFire() { return m_status == ShooterStatus.FIRING;}
     public boolean IsIdle() { return m_status == ShooterStatus.IDLE;}
     
+    public void SetHood(double angle)
+    {
+        m_Hood.setAngle(angle);
+    }
     public void WarmupShooter() {
         setStatus(ShooterStatus.WARMUP);
         setShooterVelocity(m_shooterTargetRPM); 
@@ -347,38 +350,27 @@ public class Shooter extends SubsystemBase{
 
     public  Translation2d getPassingPose(int controllerInput) {
 
-        if (controllerInput < 0 || controllerInput > 5) {
+        if (controllerInput != Constants.StandardOperatorControls.Left && controllerInput != Constants.StandardOperatorControls.Right) 
             return null;
-        }
 
         boolean isRed = DriverStation.getAlliance()
             .map(alliance -> alliance == DriverStation.Alliance.Red)
             .orElse(false);
 
-        int index ;
-        if (controllerInput <= 2) {
-
-            if (isRed) {
-                // Red: flip 3 and 5
-                index = 5 - controllerInput;
-            } else {
-                index = 3 + controllerInput;
-            }
-
-        } else {
-
-            if (isRed) {
-                if(controllerInput == 3)
-                    index = 6;
-                else if (controllerInput == 4)
-                    index = 7;
-                else //(controllerInput == 5)
-                    index = 8; 
-            } else {
-                index = controllerInput - 3;
-            }
+        if(isRed){
+            if(controllerInput == Constants.StandardOperatorControls.Left)
+                return ShooterConstants.PASSING_POSES.get(0);
+            else // if(controllerInput == Constants.StandardOperatorControls.Right)
+                return ShooterConstants.PASSING_POSES.get(1);
         }
-        return ShooterConstants.PASSING_POSES.get(index);
+
+        //else blue
+        else {
+            if(controllerInput == Constants.StandardOperatorControls.Left)
+                return ShooterConstants.PASSING_POSES.get(2);
+            else // if(controllerInput == Constants.StandardOperatorControls.Right)
+                return ShooterConstants.PASSING_POSES.get(3);
+        }
     }
 
    
