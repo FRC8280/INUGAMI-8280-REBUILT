@@ -18,8 +18,8 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
-import dev.doglog.DogLog;
-import dev.doglog.DogLogOptions;
+//import dev.doglog.DogLog;
+//import dev.doglog.DogLogOptions;
 
 public class Robot extends TimedRobot {
     private boolean secondLimeLight = true;
@@ -39,7 +39,7 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         m_robotContainer = new RobotContainer();
-        DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+        //DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
         SmartDashboard.putData("Field", m_field);
     }
 
@@ -162,7 +162,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledInit() {
-        DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
+        //DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
         // seedGyro();
         LimelightHelpers.SetIMUMode("limelight", 1); // Seed internal IMU
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 200);

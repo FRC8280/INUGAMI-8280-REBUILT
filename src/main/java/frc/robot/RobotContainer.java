@@ -37,8 +37,8 @@ import edu.wpi.first.wpilibj.Timer;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
-import dev.doglog.DogLog;
-import dev.doglog.DogLogOptions;
+//import dev.doglog.DogLog;
+//import dev.doglog.DogLogOptions;
 import frc.robot.commands.RotateToPointCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -155,7 +155,7 @@ public class RobotContainer {
         // Warmup PathPlanner to avoid Java pauses
         CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
 
-        DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+        //DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
 
     }
 
@@ -166,7 +166,6 @@ public class RobotContainer {
     public void periodic() {
         SmartDashboard.putNumber("PowerSystem/Voltage", powerDistributionSystem.getVoltage());
         SmartDashboard.putNumber("PowerSystem/Current", powerDistributionSystem.getTotalCurrent());
-        // countdownLED.periodic();
     }
 
     public void SetShootingSTate(ShootingState state) {

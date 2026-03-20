@@ -17,6 +17,7 @@ public class HoodSystem extends SubsystemBase {
     private final ServoHub m_servoHub;
     private final ServoChannel linearServoLeft;
     private final ServoChannel linearServoRight;
+    double m_angle = 0;
     
 
     public HoodSystem() {
@@ -57,7 +58,10 @@ public class HoodSystem extends SubsystemBase {
     }
 
     public void setAngle(double angle)
-    {
+    {   
+        if(m_angle == angle)
+            return;
+        m_angle = angle;
         setPosition(angleToServoValue(angle));
     }
 
