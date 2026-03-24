@@ -17,7 +17,7 @@ import edu.wpi.first.units.Units;
 
 public class LEDSubsystem extends SubsystemBase {
     public enum LightStatus {
-        OFF, WHITE, RED, GREEN
+        OFF, WHITE, RED, GREEN, YELLOW
     }
 
     private LightStatus m_LightStatus = LightStatus.RED;
@@ -30,6 +30,7 @@ public class LEDSubsystem extends SubsystemBase {
     // Colors and animation
     RGBWColor kGreen = new RGBWColor(0, 217, 0, 0);
     RGBWColor kRed = new RGBWColor(217, 0, 0, 0);
+    RGBWColor kYellow = new RGBWColor(217, 217, 0, 0);
     RGBWColor kWhite = new RGBWColor(Color.kWhite).scaleBrightness(1);
     private final ColorFlowAnimation m_slot0Animation = new ColorFlowAnimation(0, 8)
             .withSlot(0)
@@ -234,6 +235,14 @@ public class LEDSubsystem extends SubsystemBase {
 
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
         m_LightStatus = LightStatus.GREEN;
+    }
+
+    public void setYellow() {
+        if (m_LightStatus == LightStatus.YELLOW)
+            return;
+
+        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+        m_LightStatus = LightStatus.YELLOW;
     }
 
     public Command updateLEDs() {

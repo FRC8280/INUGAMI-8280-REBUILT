@@ -383,7 +383,12 @@ public class Shooter extends SubsystemBase {
         m_lineOfSite = canSeeAllianceTag("limelight");
         // todo add case for limelight-rear
         if (m_lineOfSite)
-            m_ledSupplier.get().setGreen();
+            if(rangeMeters > 3 && rangeMeters < 3.5) {
+                m_ledSupplier.get().setYellow();
+            }
+            else if (rangeMeters < 3) {
+                m_ledSupplier.get().setGreen();
+            }
         else
             m_ledSupplier.get().setRed();
 

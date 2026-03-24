@@ -157,10 +157,10 @@ public class Robot extends TimedRobot {
         LimelightHelpers.SetIMUMode("limelight", 1); // Seed internal IMU
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 200);
 
-        if (secondLimeLight) {
+
             LimelightHelpers.SetIMUMode("limelight-rear", 1); // Seed internal IMU
             LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 200);
-        }
+        
     }
 
     @Override
@@ -184,10 +184,10 @@ public class Robot extends TimedRobot {
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
         LimelightHelpers.SetIMUMode("limelight", 4);
 
-        if (secondLimeLight) {
+
             LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
             LimelightHelpers.SetIMUMode("limelight-rear", 4);
-        }
+    
     }
 
     @Override
@@ -211,10 +211,9 @@ public class Robot extends TimedRobot {
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
         LimelightHelpers.SetIMUMode("limelight", 4);
 
-        if (secondLimeLight) {
             LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
             LimelightHelpers.SetIMUMode("limelight-rear", 4);
-        }
+        
     }
 
     @Override
