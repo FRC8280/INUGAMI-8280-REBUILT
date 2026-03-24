@@ -9,7 +9,6 @@ import com.ctre.phoenix6.Utils;
 
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -22,7 +21,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 //import dev.doglog.DogLogOptions;
 
 public class Robot extends TimedRobot {
-    private boolean secondLimeLight = true;
+    private boolean secondLimeLight = false;
     private double lastLoopTime = Timer.getFPGATimestamp();
     private final Field2d m_field = new Field2d();
 
@@ -85,15 +84,10 @@ public class Robot extends TimedRobot {
                 if (Constants.kVerboseDashboard) {
                     SmartDashboard.putNumber("Front LL-X", llMeasurement.pose.getX());
                     SmartDashboard.putNumber("Front LL-Y", llMeasurement.pose.getY());
-                    // SmartDashboard.putNumber("Front
-                    // LL-Yaw",llMeasurement.pose.getRotation().getDegrees());
                     SmartDashboard.putNumber("Front LL-TagCount", llMeasurement.tagCount);
-                    // SmartDashboard.putNumber("Front LL-Timestamp",
-                    // llMeasurement.timestampSeconds);
                 }
             }
-
-            if (secondLimeLight) {
+            else if (secondLimeLight) {
                 LimelightHelpers.SetIMUAssistAlpha("limelight-rear", 0.001);
                 LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0, 0, 0);
                 llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
@@ -106,11 +100,7 @@ public class Robot extends TimedRobot {
                 if (Constants.kVerboseDashboard) {
                     SmartDashboard.putNumber("Rear LL-X", llMeasurement.pose.getX());
                     SmartDashboard.putNumber("Rear LL-Y", llMeasurement.pose.getY());
-                    // SmartDashboard.putNumber("Rear
-                    // LL-Yaw",llMeasurement.pose.getRotation().getDegrees());
                     SmartDashboard.putNumber("Rear LL-TagCount", llMeasurement.tagCount);
-                    // SmartDashboard.putNumber("Rear LL-Timestamp",
-                    // llMeasurement.timestampSeconds);
                 }
             }
         }
@@ -163,7 +153,7 @@ public class Robot extends TimedRobot {
     @Override
     public void disabledInit() {
         //DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
-        // seedGyro();
+        seedGyro();
         LimelightHelpers.SetIMUMode("limelight", 1); // Seed internal IMU
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 200);
 

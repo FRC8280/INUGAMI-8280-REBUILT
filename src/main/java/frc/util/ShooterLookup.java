@@ -17,21 +17,20 @@ public class ShooterLookup {
 
   public ShooterLookup() {
     // distance, rpm, hoodDeg
-    //addPoint(1.00, 3500, 60);
-    //addPoint(2.6000, 5000, 50);
-    addPoint(1.5, 2400, 53); //layup distance confirmed
-
-    //2.0 meters worked in interperlatoipnm
+    //Original data
+    /*addPoint(1.5, 2400, 53); //layup distance confirmed
     addPoint(2.5, 3100, 51);
-    addPoint(2.5, 3000, 53);
-    
-    
     addPoint(2.8000, 3000, 51);
-    //addPoint(3.0000, 4500, 49);
-    addPoint(3.3000, 4500, 46);
-    addPoint(3.5000, 4500, 46);
-    addPoint(4.00, 4500, 45);
-    //addPoint(8.00, 500, 45);
+    addPoint(3.3000, 3500, 49);
+    addPoint(3.5000, 4500, 46);  /// 3/21 This worked great
+    addPoint(4.00, 4500, 45);*/
+
+    addPoint(1.5, 2400, 53); //layup distance confirmed
+    addPoint(2.5, 3100, 51);
+    addPoint(2.8000, 3000, 51);
+    addPoint(3.3000, 3250, 48);   //Configrmed 3/22
+    addPoint(4.0, 3750, 48);      //confirmed lower percetage 3/22
+    
   }
 
   /** Adds one calibration point to the table. */

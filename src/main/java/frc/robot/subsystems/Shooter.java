@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -32,16 +33,19 @@ import frc.util.ShooterLookup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.ctre.phoenix6.controls.NeutralOut;
 
-public class Shooter extends SubsystemBase{
+public class Shooter extends SubsystemBase {
 
     // Shooter status state machine
-    public enum ShooterStatus { IDLE, WARMUP, FIRING }
+    public enum ShooterStatus {
+        IDLE, PREWARMUP, WARMUP, FIRING
+    }
+
     private volatile ShooterStatus m_status = ShooterStatus.IDLE;
 
     // Warmup timer and duration (seconds)
     private final Timer m_warmupTimer = new Timer();
-    
-    //Declare variables
+
+    // Declare variables
     private final Supplier<Pose2d> m_robotPoseSupplier;
 
     private TalonFX m_ShooterMotor;
@@ -70,16 +74,18 @@ public class Shooter extends SubsystemBase{
         m_ShooterLookup = new ShooterLookup();
         velocityRequest = new VelocityVoltage(0).withSlot(0);
 
-        /*labShooter = NetworkTableInstance.getDefault()
-            .getBooleanTopic("/Elastic/EnableShooter")
-            .subscribe(false);*/
+        /*
+         * labShooter = NetworkTableInstance.getDefault()
+         * .getBooleanTopic("/Elastic/EnableShooter")
+         * .subscribe(false);
+         */
 
         m_ShooterMotor = new TalonFX(ShooterConstants.kShooterMotorId);
         m_FollowerMotor = new TalonFX(ShooterConstants.kFollowerMotorId);
         m_AccelerateMotor = new TalonFX(ShooterConstants.kAccelerateMotorId);
 
         TalonFXConfiguration shooterConfig = new TalonFXConfiguration();
-        
+
         shooterConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         shooterConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
@@ -94,11 +100,21 @@ public class Shooter extends SubsystemBase{
         shooterGains.kI = ShooterConstants.kI; // no output for integrated error
         shooterGains.kD = ShooterConstants.kD; // no output for error derivative
 
+        /*
+         * MotionMagicConfigs shooterMotionMagic = shooterConfig.MotionMagic;
+         * shooterMotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity
+         * of 80 rps
+         * shooterMotionMagic.MotionMagicAcceleration = 160; // Target acceleration of
+         * 160 rps/s (0.5 seconds)
+         * shooterMotionMagic.MotionMagicJerk = 1600; // Target jerk of 1600 rps/s/s
+         * (0.1 seconds)
+         */
+
         m_ShooterMotor.getConfigurator().apply(shooterConfig);
-        m_FollowerMotor.getConfigurator().apply(shooterConfig); 
+        m_FollowerMotor.getConfigurator().apply(shooterConfig);
         m_FollowerMotor.setControl(new Follower(m_ShooterMotor.getDeviceID(), MotorAlignmentValue.Opposed));
 
-        //Setup preshot acceleration stage
+        // Setup preshot acceleration stage
         TalonFXConfiguration accelConfig = new TalonFXConfiguration();
         CurrentLimitsConfigs accelLimits = accelConfig.CurrentLimits;
         accelLimits.SupplyCurrentLimitEnable = true;
@@ -117,21 +133,51 @@ public class Shooter extends SubsystemBase{
 
     }
 
-    public ShooterStatus getStatus() { return m_status;}
-    public void setStatus(ShooterStatus status) {m_status = status;}
-    public boolean IsWarmingUp() { return m_status == ShooterStatus.WARMUP;}
-    public boolean IsReadyToFire() { return m_status == ShooterStatus.FIRING;}
-    public boolean IsIdle() { return m_status == ShooterStatus.IDLE;}
-    
-    public void SetHood(double angle)
-    {
+    public ShooterStatus getStatus() {
+        return m_status;
+    }
+
+    public void setStatus(ShooterStatus status) {
+        m_status = status;
+    }
+
+    public boolean IsWarmingUp() {
+        return m_status == ShooterStatus.WARMUP;
+    }
+
+    public boolean IsReadyToFire() {
+        return m_status == ShooterStatus.FIRING;
+    }
+
+    public boolean IsIdle() {
+        return m_status == ShooterStatus.IDLE;
+    }
+
+    public void ActivatePreShot() {
+        System.out.println("Activate Preshot.");
+        setStatus(ShooterStatus.PREWARMUP);
+        // SetPreShotVelocity(2000); //3000
+    }
+
+    public void DeactivatePreShot() {
+
+        System.out.println("Dectivate Preshot.");
+        if (m_status == ShooterStatus.PREWARMUP)
+            return;
+
+        setStatus(ShooterStatus.IDLE);
+        SetPreShotVelocity(0);
+    }
+
+    public void SetHood(double angle) {
         m_Hood.setAngle(angle);
     }
+
     public void WarmupShooter() {
         setStatus(ShooterStatus.WARMUP);
-        setShooterVelocity(m_shooterTargetRPM); 
-        SetPreShotVelocity(2500); //3000
-        
+        setShooterVelocity(m_shooterTargetRPM);
+        SetPreShotVelocity(3000); // 2500
+
         m_warmupTimer.reset();
         m_warmupTimer.start();
     }
@@ -140,89 +186,88 @@ public class Shooter extends SubsystemBase{
         setStatus(ShooterStatus.IDLE);
         setShooterVelocity(0);
         SetPreShotVelocity(0);
-        m_Hood.setAngle(0); 
+        m_Hood.setAngle(0);
         m_warmupTimer.stop();
     }
 
-
     public void setShooterVelocity(double velocity) {
         m_shooterTargetRPM = velocity;
-        if(velocity >0)
-            m_ShooterMotor.setControl(velocityRequest.withVelocity(velocity/60));
+        if (velocity > 0)
+            m_ShooterMotor.setControl(velocityRequest.withVelocity(velocity / 60));
         else
             m_ShooterMotor.setControl(neutralOut);
     }
 
-    public void SetPreShotVelocity(double velocity)
-    {
-        //double velocity = 50*60; // RPM for testing, adjust as needed
+    public void SetPreShotVelocity(double velocity) {
+        // double velocity = 50*60; // RPM for testing, adjust as needed
         m_acceleratorTargetRPM = velocity;
 
-        if(velocity > 0)
-            m_AccelerateMotor.setControl(velocityRequest.withVelocity(velocity/60));
+        if (velocity > 0)
+            m_AccelerateMotor.setControl(velocityRequest.withVelocity(velocity / 60));
         else
             m_AccelerateMotor.setControl(neutralOut);
     }
-    
-     public static boolean canSeeAllianceTag(String limelightName) {
+
+    public static boolean canSeeAllianceTag(String limelightName) {
 
         Optional<DriverStation.Alliance> allianceOpt = DriverStation.getAlliance();
         if (allianceOpt.isEmpty()) {
             return false;
         }
 
-        LimelightHelpers.RawFiducial[] fiducials =
-            LimelightHelpers.getRawFiducials(limelightName);
-       
-        if(fiducials == null || fiducials.length == 0){
+        LimelightHelpers.RawFiducial[] fiducials = LimelightHelpers.getRawFiducials(limelightName);
+
+        if (fiducials == null || fiducials.length == 0) {
             return false;
         }
 
-        
         Set<Integer> validTags = (allianceOpt.get() == DriverStation.Alliance.Blue)
                 ? ShooterConstants.BLUE_TAGS
                 : ShooterConstants.RED_TAGS;
 
         for (LimelightHelpers.RawFiducial f : fiducials) {
-            if (validTags.contains(f.id)) 
+            if (validTags.contains(f.id))
                 return true;
         }
 
         return false;
     }
-    //Todo hook these up to limelight helpers. 
-    public boolean hasTarget() { /* vision validity */ return true; }
-    public double getRangeMeters() 
-    { 
 
-        //Todo - get this from vision / range sensor / pose math
+    // Todo hook these up to limelight helpers.
+    public boolean hasTarget() {
+        /* vision validity */ return true;
+    }
+
+    public double getRangeMeters() {
+
+        // Todo - get this from vision / range sensor / pose math
         return 2.73;
     }
 
-    public Translation2d GetAllianceHub()
-    {
+    public Translation2d GetAllianceHub() {
         Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-        if(alliance == Alliance.Blue)
+        if (alliance == Alliance.Blue)
             return ShooterConstants.BlueHub;
-        else 
+        else
             return ShooterConstants.RedHub;
     }
 
     public Rotation2d getRotationToPoint(Translation2d target) {
-        
+
         Pose2d robotPose = m_robotPoseSupplier.get();
         Translation2d robotPosition = robotPose.getTranslation();
         Translation2d delta = target.minus(robotPosition); // Vector from robot to target
         Rotation2d targetAngle = delta.getAngle(); // Absolute field angle to the target
 
-        return targetAngle.minus(robotPose.getRotation()); // Difference between where robot is pointing and where it should point
+        return targetAngle.minus(robotPose.getRotation()); // Difference between where robot is pointing and where it
+                                                           // should point
 
     }
 
     public Rotation2d getRotationToAllianceHub() {
         return getRotationToPoint(GetAllianceHub());
     }
-    
+
     public double distanceToAllianceHub() {
         Pose2d pose = m_robotPoseSupplier.get();
         if (pose == null) {
@@ -233,20 +278,24 @@ public class Shooter extends SubsystemBase{
         return pose.getTranslation().getDistance(hubPoint);
     }
 
+    public enum AllianceZone {
+        BLUE, CENTER, RED, UNKNOWN
+    }
 
-    public enum AllianceZone { BLUE, CENTER, RED, UNKNOWN }
-
-     /**
-     * Returns which alliance zone the robot is in, based on the robot pose from the supplier.
+    /**
+     * Returns which alliance zone the robot is in, based on the robot pose from the
+     * supplier.
      *
      * Logic:
-     *  - Uses the known blue/red hub X coordinates to compute the field midpoint.
-     *  - If the robot X is left of (midpoint - halfWidth) -> BLUE
-     *  - If the robot X is right of (midpoint + halfWidth) -> RED
-     *  - Otherwise -> CENTER
+     * - Uses the known blue/red hub X coordinates to compute the field midpoint.
+     * - If the robot X is left of (midpoint - halfWidth) -> BLUE
+     * - If the robot X is right of (midpoint + halfWidth) -> RED
+     * - Otherwise -> CENTER
      *
-     * @param centerHalfWidthMeters half-width of the center zone in meters (default 1.0 m if using overload)
-     * @return AllianceZone enum indicating BLUE, CENTER, RED, or UNKNOWN if pose is unavailable
+     * @param centerHalfWidthMeters half-width of the center zone in meters (default
+     *                              1.0 m if using overload)
+     * @return AllianceZone enum indicating BLUE, CENTER, RED, or UNKNOWN if pose is
+     *         unavailable
      */
     public AllianceZone getAllianceZone() {
         Pose2d pose = m_robotPoseSupplier.get();
@@ -273,15 +322,16 @@ public class Shooter extends SubsystemBase{
         Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
         AllianceZone zone = getAllianceZone();
 
-        if (alliance == Alliance.Blue && zone == AllianceZone.BLUE) return true;
-        if (alliance == Alliance.Red  && zone == AllianceZone.RED)  return true;
+        if (alliance == Alliance.Blue && zone == AllianceZone.BLUE)
+            return true;
+        if (alliance == Alliance.Red && zone == AllianceZone.RED)
+            return true;
         return false;
     }
 
-
     private boolean runThisCycle = false;
 
-    public void periodic(){
+    public void periodic() {
 
         double now = Timer.getFPGATimestamp();
         double loopTime = now - lastLoopTime;
@@ -297,84 +347,83 @@ public class Shooter extends SubsystemBase{
         ShooterLookup.ShooterSetpoint sp = m_ShooterLookup.getSetpoint(rangeMeters);
         m_shooterTargetRPM = sp.rpm();
         targetAngle = sp.hoodDeg();
-        hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle-targetAngle;
-                
+        hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle - targetAngle;
+
         // Check warmup timer and transition to FIRING when elapsed
-        if (m_status == ShooterStatus.WARMUP) {
-            
-            if(isInOwnAllianceZone()) {m_Hood.setAngle(hoodActuatorAngle); }
+        if (m_status == ShooterStatus.PREWARMUP) {
+            setShooterVelocity(1500 / 60);
+        } else if (m_status == ShooterStatus.WARMUP) {
+
+            if (isInOwnAllianceZone()) {
+                m_Hood.setAngle(hoodActuatorAngle);
+            }
 
             double elapsed = m_warmupTimer.get();
             if (elapsed >= ShooterConstants.kWarmupSeconds) {
                 // warmup complete -> enter FIRING state
                 setStatus(ShooterStatus.FIRING);
                 m_warmupTimer.stop();
+            } else {
+                if ((m_ShooterMotor.getVelocity().getValueAsDouble() * 60 >= m_shooterTargetRPM * 0.9) &&
+                        (m_AccelerateMotor.getVelocity().getValueAsDouble() * 60 >= m_acceleratorTargetRPM * 0.9)) {
+                    // If both shooter and accelerator are at least 90% up to speed, we can
+                    // transition to FIRING early
+                    setStatus(ShooterStatus.FIRING);
+                    m_warmupTimer.stop();
+                }
             }
-            else
-            {
-                if( (m_ShooterMotor.getVelocity().getValueAsDouble()*60 >= m_shooterTargetRPM * 0.9) && 
-                    (m_AccelerateMotor.getVelocity().getValueAsDouble()*60 >= m_acceleratorTargetRPM * 0.9) ) {
-                        // If both shooter and accelerator are at least 90% up to speed, we can transition to FIRING early
-                        setStatus(ShooterStatus.FIRING);
-                        m_warmupTimer.stop();
-                    }
-            }
-        } else if(m_status != ShooterStatus.FIRING)
-            m_Hood.setAngle(0); 
+        } else if (m_status != ShooterStatus.FIRING)
+            m_Hood.setAngle(0);
 
         runThisCycle = !runThisCycle;
-        if(!runThisCycle) {
+        if (!runThisCycle) {
             return; // Skip this cycle to reduce load (adjust as needed)
         }
 
         m_lineOfSite = canSeeAllianceTag("limelight");
-        //todo add case for limelight-rear
-        if (m_lineOfSite) 
+        // todo add case for limelight-rear
+        if (m_lineOfSite)
             m_ledSupplier.get().setGreen();
-        else 
+        else
             m_ledSupplier.get().setRed();
-        
-            if(Constants.kVerboseDashboard) {
-                SmartDashboard.putNumber("Shooter/Hood Actuator Angle", hoodActuatorAngle);
-                SmartDashboard.putBoolean("Shooter/LineOfSight", m_lineOfSite);
-                SmartDashboard.putBoolean("Shooter/HasTarget", hasTarget());
-                SmartDashboard.putNumber("Shooter/Distance Target", rangeMeters);
-                SmartDashboard.putNumber("Shooter/TargetAngle", targetAngle);
-                SmartDashboard.putNumber("Shooter/TargetRPM", m_shooterTargetRPM);
-                SmartDashboard.putNumber("Shooter/ActualRPM", m_ShooterMotor.getVelocity().getValueAsDouble()*60); 
-                SmartDashboard.putNumber("Shooter/AcceleratorTargetRPM", m_acceleratorTargetRPM);
-                SmartDashboard.putNumber("Shooter/AcceleratorActualRPM", m_AccelerateMotor.getVelocity().getValueAsDouble()*60);
-                SmartDashboard.putNumber("Rotation to alliance hub", getRotationToAllianceHub().getDegrees());
-            }
+
+        if (Constants.kVerboseDashboard) {
+            SmartDashboard.putNumber("Shooter/Hood Actuator Angle", hoodActuatorAngle);
+            SmartDashboard.putBoolean("Shooter/LineOfSight", m_lineOfSite);
+            SmartDashboard.putBoolean("Shooter/HasTarget", hasTarget());
+            SmartDashboard.putNumber("Shooter/Distance Target", rangeMeters);
+            SmartDashboard.putNumber("Shooter/TargetAngle", targetAngle);
+            SmartDashboard.putNumber("Shooter/TargetRPM", m_shooterTargetRPM);
+            SmartDashboard.putNumber("Shooter/ActualRPM", m_ShooterMotor.getVelocity().getValueAsDouble() * 60);
+            SmartDashboard.putNumber("Shooter/AcceleratorTargetRPM", m_acceleratorTargetRPM);
+            SmartDashboard.putNumber("Shooter/AcceleratorActualRPM",
+                    m_AccelerateMotor.getVelocity().getValueAsDouble() * 60);
+            SmartDashboard.putNumber("Rotation to alliance hub", getRotationToAllianceHub().getDegrees());
+        }
     }
 
-    public  Translation2d getPassingPose(int controllerInput) {
-
-        if (controllerInput != Constants.StandardOperatorControls.Left && controllerInput != Constants.StandardOperatorControls.Right) 
-            return null;
+    public Translation2d getPassingPoseLeftButton() {
 
         boolean isRed = DriverStation.getAlliance()
-            .map(alliance -> alliance == DriverStation.Alliance.Red)
-            .orElse(false);
+                .map(alliance -> alliance == DriverStation.Alliance.Red)
+                .orElse(false);
 
-        if(isRed){
-            if(controllerInput == Constants.StandardOperatorControls.Left)
-                return ShooterConstants.PASSING_POSES.get(0);
-            else // if(controllerInput == Constants.StandardOperatorControls.Right)
-                return ShooterConstants.PASSING_POSES.get(1);
-        }
-
-        //else blue
-        else {
-            if(controllerInput == Constants.StandardOperatorControls.Left)
-                return ShooterConstants.PASSING_POSES.get(2);
-            else // if(controllerInput == Constants.StandardOperatorControls.Right)
-                return ShooterConstants.PASSING_POSES.get(3);
-        }
+        if (isRed)
+            return ShooterConstants.kRedLeftPass;
+        else
+            return ShooterConstants.kBlueLeftPass;
     }
 
-   
+    public Translation2d getPassingPoseRightButton() {
+
+        boolean isRed = DriverStation.getAlliance()
+                .map(alliance -> alliance == DriverStation.Alliance.Red)
+                .orElse(false);
+
+        if (isRed)
+            return ShooterConstants.kRedRightPass;
+        else
+            return ShooterConstants.kBlueRightPass;
+    }
 
 }
-
-

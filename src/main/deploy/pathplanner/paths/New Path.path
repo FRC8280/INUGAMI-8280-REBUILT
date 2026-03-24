@@ -3,16 +3,16 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.594,
-        "y": 3.0
+        "x": 15.870666666666668,
+        "y": 0.5952111111111105
       },
       "prevControl": null,
       "nextControl": {
-        "x": 5.83678050772148,
-        "y": 2.7882507759589474
+        "x": 16.11344717438815,
+        "y": 0.3834618870700579
       },
       "isLocked": false,
-      "linkedName": "Left Side Intake"
+      "linkedName": null
     },
     {
       "anchor": {

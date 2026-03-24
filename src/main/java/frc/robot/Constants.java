@@ -7,6 +7,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 
 public class Constants {
 
+    public enum PassingZone {
+        NOT_PASSING,
+        Zone_Left,
+        Zone_Right
+    }
+
     public static final class LEDConstants {
         public static final int kFrontCandleID = 50; // CAN bus ID for the CANdle
         public static final int kTimerCandleID = 51; // CAN bus ID for the timer candle (if used)
@@ -50,7 +56,7 @@ public class Constants {
     public static final class IndexerConstants{
         public static final int kIndexerMotorId = 11;
         public static final int kIndexerCurrentLimit = 40;
-        public static final int kSpeed = 4500;//1000;
+        public static final int kSpeed = 4500;
 
         public static final double kS = 0.25;
         public static final double kV = 0.12;
@@ -69,6 +75,7 @@ public class Constants {
         public static final double kD = 0;
         public static final double kS = 0.1;
         public static final double kV = 0.12;
+        public static final double kA = 0;
 
         //Accelerator PID values (if using)
         public static final double kAccelP = .2;
@@ -76,6 +83,7 @@ public class Constants {
         public static final double kAccelD = 0;
         public static final double kAccelS = 0.1;
         public static final double kAccelV = 0.12;
+    
 
         public static final int kShooterMotorId = 30;
         public static final int kShooterCurrentLimit = 40;
@@ -97,13 +105,11 @@ public class Constants {
         public static final double kShooterDefaultAngle = 60.0;
         public static final double kWarmupSeconds = 2.0;
 
-        public static final List<Translation2d> PASSING_POSES = List.of(
-            new Translation2d(2, 7), // 0   //blue left
-            new Translation2d(2, 1), // 1   //blue right
-
-            new Translation2d(14, 7), // 2  //red left
-            new Translation2d(14, 1)  // 3  //red right
-        );
+        public static Translation2d kBlueLeftPass = new Translation2d(0.5, 7.5);
+        public static Translation2d kBlueRightPass = new Translation2d(0.5, 0.5);
+        public static Translation2d kRedLeftPass = new Translation2d(15.5, 0.5);
+        public static Translation2d kRedRightPass = new Translation2d(15.5, 7.5);
+        
         public static Translation2d BlueHub = new Translation2d(4.85, 4.0);
         public static Translation2d RedHub = new Translation2d(11.89, 4.035);
 
@@ -115,6 +121,7 @@ public class Constants {
         public static final int OperatorAbort = 1;
         public static final int ReverseIntake = 2;
         public static final int ErrorCorrectionClose = 3;
+        public static final int WarmupShooter = 3;
         public static final int ErrorCorrectionFar = 4;
         public static final int VisionOverride = 5;
     }

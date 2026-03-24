@@ -11,6 +11,8 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class RotateToPointCommand extends Command {
 
@@ -60,6 +62,23 @@ public class RotateToPointCommand extends Command {
         double targetAngle = Math.atan2(dy, dx);
         double currentAngle = pose.getRotation().getRadians();
 
+        // compute normalized angle error in [-pi, pi]
+        double angleError = Math.atan2(Math.sin(targetAngle - currentAngle), Math.cos(targetAngle - currentAngle));
+
+        // Choose threshold depending on alliance (30° normally, 145° when on Red)
+        double thresholdDeg = (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) ? 140.0 : 30.0;
+        // if the absolute angle to target is greater than the threshold, apply a 7-degree bias
+        if (Math.abs(angleError) > Math.toRadians(thresholdDeg)) {
+            double bias = Math.toRadians(15.5);//7.0);
+            if (angleError < 0) {
+                targetAngle -= bias; // compensate more negative
+            } else {
+                targetAngle += bias; // compensate more positive
+            }
+            // recompute angleError after bias (optional)
+            angleError = Math.atan2(Math.sin(targetAngle - currentAngle), Math.cos(targetAngle - currentAngle));
+        }
+
         double omega = headingPID.calculate(currentAngle, targetAngle);
 
         drivetrain.setControl(
@@ -85,6 +104,7 @@ public class RotateToPointCommand extends Command {
                 .withRotationalRate(0)
         );
         m_RobotContainer.HitBrakes();
+        m_RobotContainer.fIsAutoAiming = true;
 
     }
 }

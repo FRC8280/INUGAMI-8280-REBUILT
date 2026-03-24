@@ -3,37 +3,32 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.841244444444444,
-        "y": 3.6842000000000006
+        "x": 5.453855555555554,
+        "y": 0.6439333333333332
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.7438,
-        "y": 2.0666222222222235
+        "x": 6.48224729246493,
+        "y": 0.6278199183373345
       },
       "isLocked": false,
-      "linkedName": "Right Neutral Intake"
+      "linkedName": null
     },
     {
       "anchor": {
-        "x": 3.4854777777777777,
-        "y": 2.4466555555555556
+        "x": 5.580533333333334,
+        "y": 0.644
       },
       "prevControl": {
-        "x": 2.4854777777777777,
-        "y": 2.4466555555555556
+        "x": 4.376142146326912,
+        "y": 0.7623529443641254
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Right Neutral First Score"
+      "linkedName": "Right Intake Start"
     }
   ],
-  "rotationTargets": [
-    {
-      "waypointRelativePos": 0.4921161825726137,
-      "rotationDegrees": 0.0
-    }
-  ],
+  "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
   "eventMarkers": [],
@@ -47,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 56.30993247402018
+    "rotation": 3.1744025462001506
   },
   "reversed": false,
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 90.0
+    "rotation": 0.0
   },
   "useDefaultConstraints": true
 }

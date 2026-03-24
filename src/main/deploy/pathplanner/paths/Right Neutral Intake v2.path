@@ -12,23 +12,23 @@
         "y": 0.7628554524880633
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Right Score Beginning"
     },
     {
       "anchor": {
-        "x": 7.948433333333334,
-        "y": 0.644
+        "x": 7.841244444444444,
+        "y": 0.760866666666667
       },
       "prevControl": {
-        "x": 7.624239150201681,
-        "y": 0.39199368306756116
+        "x": 7.862098917348861,
+        "y": 0.3507762582075908
       },
       "nextControl": {
-        "x": 8.275484374216857,
-        "y": 0.898227042156729
+        "x": 7.81201111111111,
+        "y": 1.3357222222222218
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Right Intake Beginning"
     },
     {
       "anchor": {
@@ -36,25 +36,49 @@
         "y": 3.6842000000000006
       },
       "prevControl": {
-        "x": 7.81752643532307,
-        "y": 2.342956654262779
+        "x": 7.999934834715568,
+        "y": 3.951558809695918
+      },
+      "nextControl": {
+        "x": 6.944755555555556,
+        "y": 2.1738111111111103
+      },
+      "isLocked": false,
+      "linkedName": "Right Neutral Intake"
+    },
+    {
+      "anchor": {
+        "x": 3.4854777777777777,
+        "y": 2.4466555555555556
+      },
+      "prevControl": {
+        "x": 3.4875923378940197,
+        "y": 3.117277228424166
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Right Neutral Intake"
+      "linkedName": "Right Neutral First Score"
     }
   ],
   "rotationTargets": [
     {
       "waypointRelativePos": 1.007468879668031,
       "rotationDegrees": 88.84674954169711
+    },
+    {
+      "waypointRelativePos": 1.864730290456431,
+      "rotationDegrees": 89.74545445013311
+    },
+    {
+      "waypointRelativePos": 2.561825726141045,
+      "rotationDegrees": 0.0
     }
   ],
   "constraintZones": [
     {
       "name": "Constraints Zone",
-      "minWaypointRelativePos": 0.946898263027274,
-      "maxWaypointRelativePos": 2.0,
+      "minWaypointRelativePos": 0.9558312655086856,
+      "maxWaypointRelativePos": 1.956327543424347,
       "constraints": {
         "maxVelocity": 2.0,
         "maxAcceleration": 3.0,
@@ -66,7 +90,19 @@
     }
   ],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Stop Intake",
+      "waypointRelativePos": 2.0397022332506287,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Stop Intake"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -77,7 +113,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 90.0
+    "rotation": 56.30993247402018
   },
   "reversed": false,
   "folder": null,
