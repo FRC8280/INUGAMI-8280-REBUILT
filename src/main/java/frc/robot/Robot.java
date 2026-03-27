@@ -38,7 +38,7 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         m_robotContainer = new RobotContainer();
-        //DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+        // DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
         SmartDashboard.putData("Field", m_field);
     }
 
@@ -86,8 +86,7 @@ public class Robot extends TimedRobot {
                     SmartDashboard.putNumber("Front LL-Y", llMeasurement.pose.getY());
                     SmartDashboard.putNumber("Front LL-TagCount", llMeasurement.tagCount);
                 }
-            }
-            else if (secondLimeLight) {
+            } else if (secondLimeLight) {
                 LimelightHelpers.SetIMUAssistAlpha("limelight-rear", 0.001);
                 LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0, 0, 0);
                 llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
@@ -152,15 +151,16 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledInit() {
-        //DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
+        // DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
         seedGyro();
         LimelightHelpers.SetIMUMode("limelight", 1); // Seed internal IMU
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 200);
 
+        LimelightHelpers.SetIMUMode("limelight-rear", 1); // Seed internal IMU
+        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 200);
 
-            LimelightHelpers.SetIMUMode("limelight-rear", 1); // Seed internal IMU
-            LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 200);
-        
+        m_robotContainer.showTeamColors();
+
     }
 
     @Override
@@ -184,10 +184,9 @@ public class Robot extends TimedRobot {
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
         LimelightHelpers.SetIMUMode("limelight", 4);
 
+        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
+        LimelightHelpers.SetIMUMode("limelight-rear", 4);
 
-            LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
-            LimelightHelpers.SetIMUMode("limelight-rear", 4);
-    
     }
 
     @Override
@@ -205,15 +204,15 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
 
-        //m_robotContainer.getLEDSystem().startCountdown(30);
+        // m_robotContainer.getLEDSystem().startCountdown(30);
         m_robotContainer.startTeleopTimer();
 
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
         LimelightHelpers.SetIMUMode("limelight", 4);
 
-            LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
-            LimelightHelpers.SetIMUMode("limelight-rear", 4);
-        
+        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
+        LimelightHelpers.SetIMUMode("limelight-rear", 4);
+
     }
 
     @Override

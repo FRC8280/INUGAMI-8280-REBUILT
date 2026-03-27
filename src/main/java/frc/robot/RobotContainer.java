@@ -46,6 +46,7 @@ import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Indexer;
 import frc.robot.subsystems.Shooter;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 public class RobotContainer {
 
@@ -112,7 +113,7 @@ public class RobotContainer {
     private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-    // private final Telemetry logger = new Telemetry(MaxSpeed);
+    private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController driver = new CommandXboxController(0);
     private final Joystick operatorEmergency = new Joystick(1);
@@ -389,6 +390,11 @@ public class RobotContainer {
 
         new Trigger(() -> ReadyToFire())
                 .onTrue(new InstantCommand(() -> {
+                    // Measure the spin-up time from when WarmupShooter() was started
+                    // (StartFiringSequence resets and starts m_warmupTimer) until ReadyToFire()
+                    double spinup = m_warmupTimer.get();
+                    SmartDashboard.putNumber("Shooter/SpinupTime", spinup);
+                    System.out.println("Shooter spinup time: " + spinup + " seconds");
                     OpenFire();
                 })); // activate the indexer once the shooter is warmed up and ready to fire.
 
@@ -406,15 +412,15 @@ public class RobotContainer {
         new Trigger(() -> teleopTimer.hasElapsed(10.0))
                 .onTrue(Commands.runOnce(() -> onTransitionChange(1, 30)));
 
-        // Fire once at 40 seconds
-        new Trigger(() -> teleopTimer.hasElapsed(40.0))
+        // Fire once at 35 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(35.0))
                 .onTrue(Commands.runOnce(() -> onTransitionChange(2, 30)));
-        // Fire once at 70 seconds
-        new Trigger(() -> teleopTimer.hasElapsed(70.0))
+        // Fire once at 60 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(60.0))
                 .onTrue(Commands.runOnce(() -> onTransitionChange(3, 30)));
 
-        // Fire once at 100 seconds
-        new Trigger(() -> teleopTimer.hasElapsed(100.0))
+        // Fire once at 85 seconds
+        new Trigger(() -> teleopTimer.hasElapsed(85.0))
                 .onTrue(Commands.runOnce(() -> onTransitionChange(4, 30)));
 
         // Fire once at 130 seconds
@@ -527,28 +533,27 @@ public class RobotContainer {
         // warmUpButton.onFalse(new InstantCommand(() ->
         // m_Shooter.DeactivatePreShot()));
         // Sys ID code
-        /*
-         * driver.povUp().whileTrue(drivetrain.applyRequest(() ->
-         * forwardStraight.withVelocityX(0.5).withVelocityY(0))
-         * );
-         * driver.povDown().whileTrue(drivetrain.applyRequest(() ->
-         * forwardStraight.withVelocityX(-0.5).withVelocityY(0))
-         * );
-         * 
-         * // Run SysId routines when holding back/start and X/Y.
-         * // Note that each routine should be run exactly once in a single log.
-         * driver.back().and(driver.y()).whileTrue(drivetrain.sysIdDynamic(Direction.
-         * kForward));
-         * driver.back().and(driver.x()).whileTrue(drivetrain.sysIdDynamic(Direction.
-         * kReverse));
-         * driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(
-         * Direction.kForward));
-         * driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(
-         * Direction.kReverse));
-         */
-
+        
+          driver.povUp().whileTrue(drivetrain.applyRequest(() ->
+          forwardStraight.withVelocityX(0.5).withVelocityY(0))
+          );
+         driver.povDown().whileTrue(drivetrain.applyRequest(() ->
+          forwardStraight.withVelocityX(-0.5).withVelocityY(0))
+          );
+          
+          // Run SysId routines when holding back/start and X/Y.
+          // Note that each routine should be run exactly once in a single log.
+          driver.back().and(driver.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+          driver.back().and(driver.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+          driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+          driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+         
+        drivetrain.registerTelemetry(logger::telemeterize);
     }
 
+    public void showTeamColors() {
+        ledSystem.showTeamColors();
+    }
     public Command getAutonomousCommand() {
         /* Run the path selected from the auto chooser */
         return autoChooser.getSelected();

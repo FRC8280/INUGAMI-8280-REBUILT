@@ -17,7 +17,7 @@ import edu.wpi.first.units.Units;
 
 public class LEDSubsystem extends SubsystemBase {
     public enum LightStatus {
-        OFF, WHITE, RED, GREEN, YELLOW
+        OFF, WHITE, RED, GREEN, YELLOW, BLUE
     }
 
     private LightStatus m_LightStatus = LightStatus.RED;
@@ -30,6 +30,7 @@ public class LEDSubsystem extends SubsystemBase {
     // Colors and animation
     RGBWColor kGreen = new RGBWColor(0, 217, 0, 0);
     RGBWColor kRed = new RGBWColor(217, 0, 0, 0);
+    RGBWColor kBlue = new RGBWColor(0, 0, 217, 0);
     RGBWColor kYellow = new RGBWColor(217, 217, 0, 0);
     RGBWColor kWhite = new RGBWColor(Color.kWhite).scaleBrightness(1);
     private final ColorFlowAnimation m_slot0Animation = new ColorFlowAnimation(0, 8)
@@ -46,7 +47,7 @@ public class LEDSubsystem extends SubsystemBase {
     private static final int kStripLedCount = 24;
     private static final int kStripEndIndex = kStripStartIndex + kStripLedCount - 1;
 
-    //private static final int kCountdownSeconds = 30;
+    // private static final int kCountdownSeconds = 30;
     private int countdownDuration = 30; // default, can be set when starting countdown
 
     private boolean running = false;
@@ -65,6 +66,7 @@ public class LEDSubsystem extends SubsystemBase {
 
     public LEDSubsystem() {
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kWhite));
+        m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kWhite));
         m_LightStatus = LightStatus.WHITE;
 
         clearTimerStrip();
@@ -221,39 +223,63 @@ public class LEDSubsystem extends SubsystemBase {
         clearRange(kStripStartIndex, kStripEndIndex);
     }
 
-    public void setRed() {
+    public void setRed(boolean secondLight) {
         if (m_LightStatus == LightStatus.RED)
             return;
 
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kRed));
         m_LightStatus = LightStatus.RED;
+
+        if (secondLight)
+            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kRed));
     }
 
-    public void setGreen() {
+    public void setGreen(boolean secondLight) {
         if (m_LightStatus == LightStatus.GREEN)
             return;
 
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
         m_LightStatus = LightStatus.GREEN;
+
+        if (secondLight)
+            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
     }
 
-    public void setYellow() {
+    public void setBlue(boolean secondLight) {
+        if (m_LightStatus == LightStatus.BLUE)
+            return;
+
+        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+        m_LightStatus = LightStatus.YELLOW;
+
+        if (secondLight)
+            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+    }
+
+    public void setYellow(boolean secondLight) {
         if (m_LightStatus == LightStatus.YELLOW)
             return;
 
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
         m_LightStatus = LightStatus.YELLOW;
+
+        if (secondLight)
+            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
     }
 
+    public void showTeamColors() {
+        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+        m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+    }
     public Command updateLEDs() {
         return run(() -> {
             for (var solidColor : m_colors) {
                 m_FrontCandle.setControl(solidColor);
-                //m_RearCandle.setControl(solidColor);
+                // m_RearCandle.setControl(solidColor);
             }
             m_FrontCandle.setControl(m_slot0Animation);
-            //m_RearCandle.setControl(m_slot0Animation);
+            // m_RearCandle.setControl(m_slot0Animation);
         });
     }
-    
+
 }

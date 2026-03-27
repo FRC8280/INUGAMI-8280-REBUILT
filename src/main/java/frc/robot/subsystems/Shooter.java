@@ -99,6 +99,7 @@ public class Shooter extends SubsystemBase {
         shooterGains.kP = ShooterConstants.kP; // An error of 1 rps results in 0.11 V output
         shooterGains.kI = ShooterConstants.kI; // no output for integrated error
         shooterGains.kD = ShooterConstants.kD; // no output for error derivative
+        shooterGains.kA = ShooterConstants.kA;
 
         /*
          * MotionMagicConfigs shooterMotionMagic = shooterConfig.MotionMagic;
@@ -128,6 +129,7 @@ public class Shooter extends SubsystemBase {
         accelGains.kP = ShooterConstants.kAccelP; // An error of 1 rps results in 0.11 V output
         accelGains.kI = ShooterConstants.kAccelI; // no output for integrated error
         accelGains.kD = ShooterConstants.kAccelD; // no output for error derivative
+        accelGains.kA = ShooterConstants.kAccelA;
 
         m_AccelerateMotor.getConfigurator().apply(accelConfig);
 
@@ -384,13 +386,13 @@ public class Shooter extends SubsystemBase {
         // todo add case for limelight-rear
         if (m_lineOfSite)
             if(rangeMeters > 3 && rangeMeters < 3.5) {
-                m_ledSupplier.get().setYellow();
+                m_ledSupplier.get().setYellow(false);
             }
             else if (rangeMeters < 3) {
-                m_ledSupplier.get().setGreen();
+                m_ledSupplier.get().setGreen(false);
             }
         else
-            m_ledSupplier.get().setRed();
+            m_ledSupplier.get().setRed(false);
 
         if (Constants.kVerboseDashboard) {
             SmartDashboard.putNumber("Shooter/Hood Actuator Angle", hoodActuatorAngle);

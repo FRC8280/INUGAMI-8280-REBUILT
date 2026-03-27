@@ -70,19 +70,22 @@ public class Constants {
 
     public static final class ShooterConstants{
         //shooter PID values
-        public static final double kP = 0.11;
+        public static final double kP = 0.3;//0.12761;
         public static final double kI = 0;
         public static final double kD = 0;
-        public static final double kS = 0.1;
-        public static final double kV = 0.12;
-        public static final double kA = 0;
+        public static final double kS = 0.065323;
+        public static final double kV = 0.11877;
+        public static final double kA = 0.021233;
 
         //Accelerator PID values (if using)
-        public static final double kAccelP = .2;
+        public static final double kAccelP = 0.3;//0.014922;
         public static final double kAccelI = 0;
         public static final double kAccelD = 0;
-        public static final double kAccelS = 0.1;
-        public static final double kAccelV = 0.12;
+        public static final double kAccelS = 0.3875;
+        public static final double kAccelV = 0.097625;
+        public static final double kAccelA = 0.0014459;
+
+        public static final double idleRPM = 2000;
     
 
         public static final int kShooterMotorId = 30;
