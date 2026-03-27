@@ -19,7 +19,6 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -326,12 +325,12 @@ public class RobotContainer {
          */
         drivetrain.setDefaultCommand(
                 drivetrain.applyRequest(() -> {
-                    double x = -driver.getLeftY() * MaxSpeed;
-                    double y = -driver.getLeftX() * MaxSpeed;
+                    double x = -driver.getLeftY() * MaxSpeed * driveScaler;
+                    double y = -driver.getLeftX() * MaxSpeed * driveScaler;
                     double rot = -driver.getRightX() * MaxAngularRate;
 
-                    boolean rightStickIdle = Math.abs(driver.getRightX()) < 0.10;
-                   /* if (fIsAutoAiming && lastTarget != null && rightStickIdle) {
+                    /*boolean rightStickIdle = Math.abs(driver.getRightX()) < 0.10;
+                    if (fIsAutoAiming && lastTarget != null && rightStickIdle) {
                         Pose2d pose = drivetrain.getState().Pose;
                         Translation2d toTarget = lastTarget.minus(pose.getTranslation());
 
