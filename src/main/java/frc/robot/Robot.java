@@ -8,12 +8,15 @@ import com.ctre.phoenix6.HootAutoReplay;
 import com.ctre.phoenix6.Utils;
 
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
@@ -35,11 +38,20 @@ public class Robot extends TimedRobot {
             .withJoystickReplay();
 
     private final boolean kUseLimelight = true;
+    private boolean gyroSeeded = false;
 
     public Robot() {
         m_robotContainer = new RobotContainer();
         // DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
         SmartDashboard.putData("Field", m_field);
+    }
+
+    @Override
+    public void robotInit() {
+        SmartDashboard.putData(
+                "Seed Gyro",
+                Commands.runOnce(this::seedGyro)
+                        .withName("Seed Gyro"));
     }
 
     @Override
@@ -118,35 +130,42 @@ public class Robot extends TimedRobot {
     }
 
     public void seedGyro() {
-        // Todo: if this is null check the second camera
-        var mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-        var mt1rear = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear");
-        if (mt1 != null) {
-            if (mt1.tagCount >= 1) {// 2
-                m_robotContainer.drivetrain.getPigeon2().setYaw(mt1.pose.getRotation().getDegrees());
-                m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(0, 0, Math.toRadians(0)));
-                m_robotContainer.drivetrain.addVisionMeasurement(mt1.pose,
-                        Utils.fpgaToCurrentTime(mt1.timestampSeconds));
-                // if( DriverStation.getAllia nce().get() == DriverStation.Alliance.Red)
-                // m_robotContainer.drivetrain.seedFieldCentric(new
-                // Rotation2d(Math.toRadians(mt1.pose.getRotation().getDegrees()-180)));
-                // else
-                m_robotContainer.drivetrain.seedFieldCentric(mt1.pose.getRotation());
-            }
-        } else if (mt1rear != null) {
-            if (mt1rear.tagCount >= 1) {// 2
-                m_robotContainer.drivetrain.getPigeon2().setYaw(mt1rear.pose.getRotation().getDegrees());
-                m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(0, 0, Math.toRadians(0)));
-                m_robotContainer.drivetrain.addVisionMeasurement(mt1rear.pose,
-                        Utils.fpgaToCurrentTime(mt1rear.timestampSeconds));
-                // if( DriverStation.getAlliance().get() == DriverStation.Alliance.Red)
-                // m_robotContainer.drivetrain.seedFieldCentric(new
-                // Rotation2d(Math.toRadians(mt1rear.pose.getRotation().getDegrees()-180)));
-                // else
-                m_robotContainer.drivetrain.seedFieldCentric(mt1rear.pose.getRotation());
-            }
+        // Log to console when seeding is attempted
+        System.out.println("seedGyro called");
+        
+        if(gyroSeeded)
+            return;
+        
+        LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
+        LimelightHelpers.SetIMUMode("limelight", 4);
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
 
+        var mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
+        if (mt1 != null) {
+            System.out.println("seedGyro: limelight measurement present, tagCount=" + mt1.tagCount);
+            if (mt1.tagCount >= 1) {
+
+                gyroSeeded = true;
+                Pose2d seedPose = mt1.pose;
+                System.out.println("seedGyro: seeding yaw=" + mt1.pose.getRotation().getDegrees()
+                        + " deg, timestamp=" + mt1.timestampSeconds);
+                m_robotContainer.drivetrain.getPigeon2().setYaw(mt1.pose.getRotation().getDegrees());
+                m_robotContainer.drivetrain.resetPose(seedPose);
+                m_robotContainer.drivetrain.seedFieldCentric(mt1.pose.getRotation());
+            } else {
+                //Todo test this code. 
+                System.out.println("seedGyro: insufficient tags (" + mt1.tagCount + "), not seeding.");
+                if( DriverStation.getAlliance().get() == DriverStation.Alliance.Red)
+                 m_robotContainer.drivetrain.seedFieldCentric(new Rotation2d(Math.toRadians(mt1.pose.getRotation().getDegrees()-180)));
+                
+                }
+        } else {
+            System.out.println("seedGyro: no limelight pose available");
+        }
     }
 
     @Override

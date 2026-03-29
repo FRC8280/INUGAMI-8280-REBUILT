@@ -15,6 +15,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.FollowPathCommand;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -30,6 +31,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.Timer;
@@ -69,7 +72,6 @@ public class RobotContainer {
         Zone_Right
     }
 
-    public boolean fIsAutoAiming = false;
 
     private PassingZone passingZone = PassingZone.NOT_PASSING;
     private ShootingState m_shootingState = ShootingState.IDLE;
@@ -93,7 +95,7 @@ public class RobotContainer {
     private static final double kIntakeDeployDuration = 0.25;
     private boolean m_intakeCycleRunning = false;
 
-    private double driveScaler = 0.70;
+    private double driveScaler = 0.80;
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top
                                                                                         // speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second
@@ -127,8 +129,7 @@ public class RobotContainer {
 
     private final Timer m_warmupTimer = new Timer();
 
-    private Command autoAimCommand = null;
-    private Translation2d lastTarget = null;
+   
 
     private boolean driverOverride() {
         return Math.abs(xAxis.getAsDouble()) > deadzone
@@ -253,11 +254,21 @@ public class RobotContainer {
         m_autoAimPID.setTolerance(Math.toRadians(2.0)); // ~2 degrees
     }
 
-    public void ActivateAutoAim(Translation2d target)
-    {
-        lastTarget = target;
-        fIsAutoAiming = true;
-    }
+   
+
+    // Supplier defined here
+    // PID used for auto-aiming (outputs radians/sec). Tune these gains.
+    private final PIDController aimPID = new PIDController(6.0, 0.0, 0.8);
+
+    public boolean fIsAutoAiming = false;
+    private Command autoAimCommand = null;
+    private Translation2d lastTarget = m_Shooter.GetAllianceHub();
+    
+    //Make these member variables to reduce number of math calls
+    private double m_desiredAngle = 0.0;
+    private double m_currentAngle = 0.0;
+    private double m_angleError = 0.0;
+    private double m_matchPercent = 0.0;
 
     private Command ExecuteAimCommand(Translation2d target) {
 
@@ -270,6 +281,84 @@ public class RobotContainer {
                 () -> driverOverride());
 
         return autoAimCommand;
+    }
+
+    //Simplify the caluculations by doing this once per cycle. 
+    //Allowing other functions to use these values without calculating them. 
+    private void CalculateTargetAngles()
+    {
+        if(!fIsAutoAiming || lastTarget == null)  //if not autoaiming or no target, reset values and return
+        {
+            m_desiredAngle = 0.0;
+            m_currentAngle = 0.0;
+            m_angleError = 0.0;
+            m_matchPercent = 0.0;
+            return;
+        }
+
+        var pose = drivetrain.getState().Pose;
+        double dx = lastTarget.getX() - pose.getX();
+        double dy = lastTarget.getY() - pose.getY();
+        m_desiredAngle = Math.atan2(dy, dx); // radians
+        m_currentAngle = pose.getRotation().getRadians();
+
+        m_angleError = Math.atan2(Math.sin(m_desiredAngle - m_currentAngle),
+                                       Math.cos(m_desiredAngle - m_currentAngle));
+        // Choose threshold depending on alliance (30° normally, 145° when on Red)
+        // In these cases we want to aim a little closer. 
+        double thresholdDeg = (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) ? 140.0 : 30.0;
+        // if the absolute angle to target is greater than the threshold, apply a 7-degree bias
+        if (Math.abs(m_angleError) > Math.toRadians(thresholdDeg)) {
+            double bias = Math.toRadians(15.5);//7.0);
+            if (m_angleError < 0) {
+                m_desiredAngle -= bias; // compensate more negative
+            } else {
+                m_desiredAngle += bias; // compensate more positive
+            }
+            // recompute angleError after bias (optional)
+            m_angleError = Math.atan2(Math.sin(m_desiredAngle - m_currentAngle), Math.cos(m_desiredAngle - m_currentAngle));
+        }
+
+        m_matchPercent = (1.0 - Math.min(1.0, Math.abs(m_angleError) / Math.PI)) * 100.0;
+
+        boolean withinAimTolerance = fIsAutoAiming && lastTarget != null
+                && IsRobotAlignedToTarget();
+        SmartDashboard.putBoolean("AngleWithinTolerance", withinAimTolerance);
+        SmartDashboard.putNumber("AngleError (deg)", Math.toDegrees(m_angleError));
+        SmartDashboard.putNumber("AngleMatchPercent", m_matchPercent);
+        SmartDashboard.putNumber("Current Angle (deg)", Math.toDegrees(m_currentAngle));
+        SmartDashboard.putNumber("Desired Angle (deg)", Math.toDegrees(m_desiredAngle));
+        
+    }
+
+    /**
+     * Return true when the robot is facing the given target within the provided
+     * tolerance (radians).
+     * false if target is null or the error is outside the tolerance.
+     */
+    private boolean IsRobotAlignedToTarget() {
+       if (!fIsAutoAiming || lastTarget == null) 
+            return false;
+        
+        // Return true when match is 96% or better
+        return m_matchPercent >= 96.0;
+       
+    }
+
+    public void ActivateAutoAim(Translation2d target)
+    {
+        lastTarget = target;
+        fIsAutoAiming = true;
+    }
+
+    private double CalculateAnglePIDToTarget(Translation2d target) {
+        if (!fIsAutoAiming || lastTarget == null) {
+            return Double.NaN;
+        }
+        double rot = aimPID.calculate(m_currentAngle, m_desiredAngle);
+        rot = MathUtil.clamp(rot, -MaxAngularRate, MaxAngularRate);
+
+        return rot;
     }
 
     public void HitBrakes() {
@@ -307,6 +396,23 @@ public class RobotContainer {
 
     private void configureBindings() {
 
+        // compute rotational rate via PID toward lastTarget and use that rotation.
+        drivetrain.setDefaultCommand(
+                drivetrain.applyRequest(() -> {
+                    double vx = -driver.getLeftY() * MaxSpeed * driveScaler;
+                    double vy = -driver.getLeftX() * MaxSpeed * driveScaler;
+
+                    if (fIsAutoAiming && lastTarget != null && !driverOverride()) {
+                        CalculateTargetAngles(); // Update the target angles and error for telemetry
+                        double rot = CalculateAnglePIDToTarget(lastTarget);
+
+                        return drive.withVelocityX(vx).withVelocityY(vy).withRotationalRate(rot);
+                    } else {
+                        return drive.withVelocityX(vx).withVelocityY(vy)
+                                .withRotationalRate(-driver.getRightX() * MaxAngularRate);
+                    }
+                }));
+
         // Original drive code
         /*
          * drivetrain.setDefaultCommand(
@@ -323,38 +429,7 @@ public class RobotContainer {
          * .withRotationalRate(rotationalRate);
          * }));
          */
-        drivetrain.setDefaultCommand(
-                drivetrain.applyRequest(() -> {
-                    double x = -driver.getLeftY() * MaxSpeed * driveScaler;
-                    double y = -driver.getLeftX() * MaxSpeed * driveScaler;
-                    double rot = -driver.getRightX() * MaxAngularRate;
-
-                    /*boolean rightStickIdle = Math.abs(driver.getRightX()) < 0.10;
-                    if (fIsAutoAiming && lastTarget != null && rightStickIdle) {
-                        Pose2d pose = drivetrain.getState().Pose;
-                        Translation2d toTarget = lastTarget.minus(pose.getTranslation());
-
-                        Rotation2d targetHeading;
-
-                        // Guard against a near-zero vector so we don't compute a noisy angle
-                        if (toTarget.getNorm() < 0.05) {
-                            targetHeading = pose.getRotation();
-                        } else {
-                            targetHeading = new Rotation2d(toTarget.getX(), toTarget.getY());
-                        }
-
-                        return aimDrive
-                                .withVelocityX(x)
-                                .withVelocityY(y)
-                                .withTargetDirection(targetHeading);
-                    } */
-
-                    return drive
-                            .withVelocityX(x)
-                            .withVelocityY(y)
-                            .withRotationalRate(rot);
-                }));
-
+        
          // If driver takes manual rotational control (right stick > 0.5) disable auto-aim.
         new Trigger(() -> Math.abs(driver.getRightX()) > 0.5)
             .onTrue(new InstantCommand(() -> fIsAutoAiming = false));
@@ -368,7 +443,7 @@ public class RobotContainer {
         new Trigger(() -> Math.abs(driver.getLeftY()) < deadzone
                 && Math.abs(driver.getLeftX()) < deadzone
                 && Math.abs(driver.getRightX()) < deadzone
-                && m_alignmentState != AlignmentState.ALIGNING)
+                && IsRobotAlignedToTarget()  )
                 .whileTrue(drivetrain.applyRequest(() -> brake));
 
         driver.b().whileTrue(drivetrain
@@ -403,7 +478,7 @@ public class RobotContainer {
         driver.a().onFalse((new InstantCommand(() -> m_Intake.stopIntake())));
 
         // Aiming logic
-        driver.y().onTrue(ExecuteAimCommand(m_Shooter.GetAllianceHub()));
+        driver.y().onTrue(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub())));
 
         // Phase transitions
         // Todo: implement warm up sequence on shooter based on phase
@@ -440,8 +515,7 @@ public class RobotContainer {
         JoystickButton shootFuelButton = new JoystickButton(operatorStandard,
                 Constants.StandardOperatorControls.ShootFuel);
         shootFuelButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
-                 .alongWith(ExecuteAimCommand(m_Shooter.GetAllianceHub())));
-                //.alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
+                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
         shootFuelButton.onFalse(new InstantCommand(() -> CeaseFire()));
 
         // set fIsAutoAiming when we are in any shooting state or in a passing zone
@@ -516,13 +590,13 @@ public class RobotContainer {
         JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Left);
         passZone4.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Left)
                 .alongWith(new InstantCommand(() -> StartFiringSequence()))
-                 .alongWith(ExecuteAimCommand(m_Shooter.getPassingPoseLeftButton())));
+                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseLeftButton()))));
          passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Left)));
 
         JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Right);
         passZone5.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Right)
                 .alongWith(new InstantCommand(() -> StartFiringSequence()))
-                 .alongWith(ExecuteAimCommand(m_Shooter.getPassingPoseRightButton())));
+                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseRightButton()))));
          passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Right)));
 
         JoystickButton warmUpButton = new JoystickButton(operatorEmergency,

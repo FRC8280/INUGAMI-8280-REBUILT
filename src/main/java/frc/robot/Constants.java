@@ -41,11 +41,11 @@ public class Constants {
         public static final int kPivotCurrentLimit = 30;
         public static final int kPivotStatorCurrentLimit = 60;
         public static final double kPivotStowed = 0;
-        public static final double kPivotDeployed = -21.796;
+        public static final double kPivotDeployed = -22.45;
         public static final double kPivotAgitate = -7.683;
 
         public static final int kRollerIntakeMotorId = 12;
-        public static final int kSpeed = 3000;
+        public static final int kSpeed = -4000;
         public static final int kRollerCurrentLimit =40;
 
         public static final int kAbsEncoderId = 45;
@@ -114,9 +114,6 @@ public class Constants {
         
         public static Translation2d BlueHub = new Translation2d(4.85, 4.0);
         public static Translation2d RedHub = new Translation2d(11.89, 4.035);
-
-        
-
     }
 
     public static final class EmergencyOperatorControls{

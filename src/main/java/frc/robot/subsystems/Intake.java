@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -55,7 +56,7 @@ public class Intake extends SubsystemBase {
 
         TalonFXConfiguration PivotConfigs = new TalonFXConfiguration();
         PivotConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        PivotConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        PivotConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
         Slot0Configs intakeGains = PivotConfigs.Slot0;
         intakeGains.kG = 0.01; // Add 0.5 V output to overcome gravity at the pivot's center of mass
@@ -69,12 +70,12 @@ public class Intake extends SubsystemBase {
         pivotMotionMagic.MotionMagicJerk = 1600; // Target jerk of 1600 rps/s/s (0.1 seconds)*/
 
         //Setup the motor to use the cancoder
-        /*FeedbackConfigs feedbackConfigs = new FeedbackConfigs();
+        FeedbackConfigs feedbackConfigs = new FeedbackConfigs();
         feedbackConfigs.FeedbackSensorSource = com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RemoteCANcoder;
         feedbackConfigs.FeedbackRemoteSensorID = m_ThroughBoreEncoder.getDeviceID();
         feedbackConfigs.SensorToMechanismRatio = 1.0;
         feedbackConfigs.RotorToSensorRatio = 60.0;
-        PivotConfigs.Feedback = feedbackConfigs;*/
+        PivotConfigs.Feedback = feedbackConfigs;
 
         m_PivotMotor.getConfigurator().apply(PivotConfigs);
         m_PivotMotor.setPosition(0);
