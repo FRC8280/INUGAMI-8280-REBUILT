@@ -30,6 +30,8 @@ public class ShooterLookup {
     addPoint(2.8000, 3000, 51);
     addPoint(3.3000, 3250, 48);   //Configrmed 3/22
     addPoint(4.0, 3750, 48);      //confirmed lower percetage 3/22
+    addPoint(7.0, 5600, 45);      //confirmed lower percetage 3/22
+    addPoint(10.0, 5600, 45);  
     
   }
 

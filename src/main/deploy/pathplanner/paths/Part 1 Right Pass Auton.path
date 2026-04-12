@@ -3,51 +3,47 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 14.515931818178297,
-        "y": 6.962136363636371
+        "x": 3.5494772727272723,
+        "y": 2.1488522727272734
       },
       "prevControl": null,
       "nextControl": {
-        "x": 15.290246406524128,
-        "y": 7.005735493823734
+        "x": 4.460572008822509,
+        "y": 2.1901254361695552
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Right Pass auton (endpoint for part 2)"
     },
     {
       "anchor": {
-        "x": 5.876348074179743,
-        "y": 0.6386019971469341
+        "x": 7.868034090909092,
+        "y": 2.1488522727272734
       },
       "prevControl": {
-        "x": 4.595414996347824,
-        "y": 0.6435945119644934
-      },
-      "nextControl": {
-        "x": 7.157281152011663,
-        "y": 0.6336094823293749
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 6.569375,
-        "y": 0.9326477272727276
-      },
-      "prevControl": {
-        "x": 6.87363489418765,
-        "y": -0.8505020770171303
+        "x": 6.591471565969082,
+        "y": 2.198646687862693
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Right Pass auton part 1"
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Start Intake",
+      "waypointRelativePos": 1.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Start Intake"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -58,13 +54,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 89.30972280213486
   },
   "reversed": false,
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 61.64503821467591
   },
   "useDefaultConstraints": true
 }

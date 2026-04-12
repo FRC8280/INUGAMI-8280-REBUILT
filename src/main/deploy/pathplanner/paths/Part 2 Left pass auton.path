@@ -1,0 +1,77 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 7.775272727272727,
+        "y": 5.962375
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 8.628045014173642,
+        "y": 5.970098377924551
+      },
+      "isLocked": false,
+      "linkedName": "Left Shoot Pass auton "
+    },
+    {
+      "anchor": {
+        "x": 3.621625,
+        "y": 5.962375
+      },
+      "prevControl": {
+        "x": 2.9596159834370193,
+        "y": 5.964167941111232
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Left pass auton part 1 (for part 2)"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [
+    {
+      "name": "Warmup Shooter",
+      "waypointRelativePos": 0.4470377019748655,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Warmup Shooter"
+        }
+      }
+    },
+    {
+      "name": "Shoot",
+      "waypointRelativePos": 1.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Shoot"
+        }
+      }
+    }
+  ],
+  "globalConstraints": {
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -71.02959219151347
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": -179.18154453831133
+  },
+  "useDefaultConstraints": true
+}

@@ -6,8 +6,10 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -17,8 +19,8 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-//import edu.wpi.first.networktables.BooleanSubscriber;
-//import edu.wpi.first.networktables.NetworkTableInstance;
+// import edu.wpi.first.networktables.BooleanSubscriber;
+// import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -30,16 +32,33 @@ import frc.robot.Constants.ShooterConstants;
 import frc.robot.LimelightHelpers;
 import frc.util.ShooterLookup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import com.ctre.phoenix6.controls.NeutralOut;
 
 public class Shooter extends SubsystemBase {
 
     // Shooter status state machine
     public enum ShooterStatus {
-        IDLE, PREWARMUP, WARMUP, FIRING
+        IDLE,
+        PREWARMUP,
+        WARMUP,
+        FIRING,
+        COASTING_TO_IDLE
     }
 
     private volatile ShooterStatus m_status = ShooterStatus.IDLE;
+
+    // CTRE control slots
+    private static final int kShootSlot = 0;
+    private static final int kIdleSlot = 1;
+
+    // Idle shooter behavior
+    private static final double kIdleShooterRPM = 1500.0;
+
+    /**
+     * We do NOT command idle immediately when leaving FIRING/WARMUP.
+     * We neutral the motor first, let it coast naturally, then once the wheel
+     * falls near idle speed we softly catch it with the idle PID slot.
+     */
+    private static final double kIdleCaptureRPM = 1650.0;
 
     // Warmup timer and duration (seconds)
     private final Timer m_warmupTimer = new Timer();
@@ -56,7 +75,12 @@ public class Shooter extends SubsystemBase {
     double m_acceleratorTargetRPM = 0;
     boolean m_lineOfSite = false;
 
-    private VelocityVoltage velocityRequest;
+    private final VelocityVoltage shooterVelocityRequest =
+            new VelocityVoltage(0).withSlot(kShootSlot);
+    private final VelocityVoltage shooterIdleVelocityRequest =
+            new VelocityVoltage(0).withSlot(kIdleSlot);
+    private final VelocityVoltage acceleratorVelocityRequest =
+            new VelocityVoltage(0).withSlot(kShootSlot);
 
     ServoHubConfig config;
     public final HoodSystem m_Hood;
@@ -71,7 +95,6 @@ public class Shooter extends SubsystemBase {
 
         m_Hood = new HoodSystem();
         m_ShooterLookup = new ShooterLookup();
-        velocityRequest = new VelocityVoltage(0).withSlot(0);
 
         /*
          * labShooter = NetworkTableInstance.getDefault()
@@ -92,22 +115,29 @@ public class Shooter extends SubsystemBase {
         shooterLimits.SupplyCurrentLimitEnable = true;
         shooterLimits.SupplyCurrentLimit = ShooterConstants.kShooterCurrentLimit;
 
+        // Slot 0 = normal shooting PID
         Slot0Configs shooterGains = shooterConfig.Slot0;
-        shooterGains.kS = ShooterConstants.kS; // Add 0.1 V output to overcome static friction
-        shooterGains.kV = ShooterConstants.kV; // A velocity target of 1 rps results in 0.12 V output
-        shooterGains.kP = ShooterConstants.kP; // An error of 1 rps results in 0.11 V output
-        shooterGains.kI = ShooterConstants.kI; // no output for integrated error
-        shooterGains.kD = ShooterConstants.kD; // no output for error derivative
+        shooterGains.kS = ShooterConstants.kS;
+        shooterGains.kV = ShooterConstants.kV;
+        shooterGains.kP = ShooterConstants.kP;
+        shooterGains.kI = ShooterConstants.kI;
+        shooterGains.kD = ShooterConstants.kD;
         shooterGains.kA = ShooterConstants.kA;
+
+        // Slot 1 = idle hold PID, much softer than shoot slot
+        Slot1Configs shooterIdleGains = shooterConfig.Slot1;
+        shooterIdleGains.kS = ShooterConstants.kS;
+        shooterIdleGains.kV = ShooterConstants.kV;
+        shooterIdleGains.kP = ShooterConstants.kP * 0.10;
+        shooterIdleGains.kI = 0.0;
+        shooterIdleGains.kD = 0.0;
+        shooterIdleGains.kA = ShooterConstants.kA;
 
         /*
          * MotionMagicConfigs shooterMotionMagic = shooterConfig.MotionMagic;
-         * shooterMotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity
-         * of 80 rps
-         * shooterMotionMagic.MotionMagicAcceleration = 160; // Target acceleration of
-         * 160 rps/s (0.5 seconds)
-         * shooterMotionMagic.MotionMagicJerk = 1600; // Target jerk of 1600 rps/s/s
-         * (0.1 seconds)
+         * shooterMotionMagic.MotionMagicCruiseVelocity = 80;
+         * shooterMotionMagic.MotionMagicAcceleration = 160;
+         * shooterMotionMagic.MotionMagicJerk = 1600;
          */
 
         m_ShooterMotor.getConfigurator().apply(shooterConfig);
@@ -123,15 +153,14 @@ public class Shooter extends SubsystemBase {
         accelConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
         Slot0Configs accelGains = accelConfig.Slot0;
-        accelGains.kS = ShooterConstants.kAccelS; // Add 0.1 V output to overcome static friction
-        accelGains.kV = ShooterConstants.kAccelV; // A velocity target of 1 rps results in 0.12 V output
-        accelGains.kP = ShooterConstants.kAccelP; // An error of 1 rps results in 0.11 V output
-        accelGains.kI = ShooterConstants.kAccelI; // no output for integrated error
-        accelGains.kD = ShooterConstants.kAccelD; // no output for error derivative
+        accelGains.kS = ShooterConstants.kAccelS;
+        accelGains.kV = ShooterConstants.kAccelV;
+        accelGains.kP = ShooterConstants.kAccelP;
+        accelGains.kI = ShooterConstants.kAccelI;
+        accelGains.kD = ShooterConstants.kAccelD;
         accelGains.kA = ShooterConstants.kAccelA;
 
         m_AccelerateMotor.getConfigurator().apply(accelConfig);
-
     }
 
     public ShooterStatus getStatus() {
@@ -151,20 +180,22 @@ public class Shooter extends SubsystemBase {
     }
 
     public boolean IsIdle() {
-        return m_status == ShooterStatus.IDLE;
+        return m_status == ShooterStatus.IDLE || m_status == ShooterStatus.COASTING_TO_IDLE;
     }
 
     public void ActivatePreShot() {
         System.out.println("Activate Preshot.");
         setStatus(ShooterStatus.PREWARMUP);
-        // SetPreShotVelocity(2000); //3000
+        // SetPreShotVelocity(2000); // 3000
     }
 
     public void DeactivatePreShot() {
+        System.out.println("Deactivate Preshot.");
 
-        System.out.println("Dectivate Preshot.");
-        if (m_status == ShooterStatus.PREWARMUP)
+        if (m_status == ShooterStatus.PREWARMUP || m_status == ShooterStatus.FIRING || m_status == ShooterStatus.WARMUP) {
+            beginCoastToIdle();
             return;
+        }
 
         setStatus(ShooterStatus.IDLE);
         SetPreShotVelocity(0);
@@ -184,29 +215,46 @@ public class Shooter extends SubsystemBase {
     }
 
     public void CeaseFire() {
-        setStatus(ShooterStatus.IDLE);
-        setShooterVelocity(0);
-        SetPreShotVelocity(0);
+        beginCoastToIdle();
         m_Hood.setAngle(0);
         m_warmupTimer.stop();
     }
 
+    private void beginCoastToIdle() {
+        setStatus(ShooterStatus.COASTING_TO_IDLE);
+
+        // Let the shooter coast naturally. No braking, no velocity control yet.
+        m_ShooterMotor.setControl(neutralOut);
+
+        // Accelerator is not being held at idle; let it neutral out fully.
+        m_AccelerateMotor.setControl(neutralOut);
+        m_acceleratorTargetRPM = 0;
+    }
+
+    public void engageShooterIdle() {
+        m_shooterTargetRPM = kIdleShooterRPM;
+        m_ShooterMotor.setControl(
+                shooterIdleVelocityRequest.withVelocity(kIdleShooterRPM / 60.0));
+        setStatus(ShooterStatus.IDLE);
+    }
+
     public void setShooterVelocity(double velocity) {
         m_shooterTargetRPM = velocity;
-        if (velocity > 0)
-            m_ShooterMotor.setControl(velocityRequest.withVelocity(velocity / 60));
-        else
+        if (velocity > 0) {
+            m_ShooterMotor.setControl(shooterVelocityRequest.withVelocity(velocity / 60.0));
+        } else {
             m_ShooterMotor.setControl(neutralOut);
+        }
     }
 
     public void SetPreShotVelocity(double velocity) {
-        // double velocity = 50*60; // RPM for testing, adjust as needed
         m_acceleratorTargetRPM = velocity;
 
-        if (velocity > 0)
-            m_AccelerateMotor.setControl(velocityRequest.withVelocity(velocity / 60));
-        else
+        if (velocity > 0) {
+            m_AccelerateMotor.setControl(acceleratorVelocityRequest.withVelocity(velocity / 60.0));
+        } else {
             m_AccelerateMotor.setControl(neutralOut);
+        }
     }
 
     public static boolean canSeeAllianceTag(String limelightName) {
@@ -236,11 +284,10 @@ public class Shooter extends SubsystemBase {
 
     // Todo hook these up to limelight helpers.
     public boolean hasTarget() {
-        /* vision validity */ return true;
+        return true;
     }
 
     public double getRangeMeters() {
-
         // Todo - get this from vision / range sensor / pose math
         return 2.73;
     }
@@ -254,15 +301,12 @@ public class Shooter extends SubsystemBase {
     }
 
     public Rotation2d getRotationToPoint(Translation2d target) {
-
         Pose2d robotPose = m_robotPoseSupplier.get();
         Translation2d robotPosition = robotPose.getTranslation();
-        Translation2d delta = target.minus(robotPosition); // Vector from robot to target
-        Rotation2d targetAngle = delta.getAngle(); // Absolute field angle to the target
+        Translation2d delta = target.minus(robotPosition);
+        Rotation2d targetAngle = delta.getAngle();
 
-        return targetAngle.minus(robotPose.getRotation()); // Difference between where robot is pointing and where it
-                                                           // should point
-
+        return targetAngle.minus(robotPose.getRotation());
     }
 
     public Rotation2d getRotationToAllianceHub() {
@@ -283,21 +327,6 @@ public class Shooter extends SubsystemBase {
         BLUE, CENTER, RED, UNKNOWN
     }
 
-    /**
-     * Returns which alliance zone the robot is in, based on the robot pose from the
-     * supplier.
-     *
-     * Logic:
-     * - Uses the known blue/red hub X coordinates to compute the field midpoint.
-     * - If the robot X is left of (midpoint - halfWidth) -> BLUE
-     * - If the robot X is right of (midpoint + halfWidth) -> RED
-     * - Otherwise -> CENTER
-     *
-     * @param centerHalfWidthMeters half-width of the center zone in meters (default
-     *                              1.0 m if using overload)
-     * @return AllianceZone enum indicating BLUE, CENTER, RED, or UNKNOWN if pose is
-     *         unavailable
-     */
     public AllianceZone getAllianceZone() {
         Pose2d pose = m_robotPoseSupplier.get();
         if (pose == null) {
@@ -330,8 +359,35 @@ public class Shooter extends SubsystemBase {
         return false;
     }
 
+    // Passing override: when true, use the fixed passing RPM and hood angle
+    // instead of the range-based lookup performed in periodic(). This is
+    // enabled by RobotContainer when performing passes between robots.
+    private boolean fPassing = false;
+    private double m_passingTargetRPM = 0.0; // RPM
+    private double m_passingHoodDeg = 0.0;   // hood degrees
+
+    /**
+     * Enable passing override: shooter will use provided RPM and hood angle
+     * until disablePassingMode() is called.
+     */
+    public void enablePassingMode(double rpm, double hoodDeg) {
+        fPassing = true;
+        m_passingTargetRPM = rpm;
+        m_passingHoodDeg = hoodDeg;
+        SmartDashboard.putBoolean("Shooter/PassingMode", true);
+        SmartDashboard.putNumber("Shooter/PassingRPM", rpm);
+        SmartDashboard.putNumber("Shooter/PassingHoodDeg", hoodDeg);
+    }
+
+    /** Disable passing override and resume normal automatic setpoint selection. */
+    public void disablePassingMode() {
+        fPassing = false;
+        SmartDashboard.putBoolean("Shooter/PassingMode", false);
+    }
+
     private boolean runThisCycle = false;
 
+    @Override
     public void periodic() {
 
         double now = Timer.getFPGATimestamp();
@@ -345,14 +401,31 @@ public class Shooter extends SubsystemBase {
         double hoodActuatorAngle = 0;
 
         rangeMeters = distanceToAllianceHub();
-        ShooterLookup.ShooterSetpoint sp = m_ShooterLookup.getSetpoint(rangeMeters);
-        m_shooterTargetRPM = sp.rpm();
-        targetAngle = sp.hoodDeg();
+        if (fPassing) {
+            // Use fixed passing setpoints when in passing mode
+            m_shooterTargetRPM = m_passingTargetRPM;
+            targetAngle = m_passingHoodDeg;
+        } else {
+            ShooterLookup.ShooterSetpoint sp = m_ShooterLookup.getSetpoint(rangeMeters);
+            m_shooterTargetRPM = sp.rpm();
+            targetAngle = sp.hoodDeg();
+        }
         hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle - targetAngle;
 
-        // Check warmup timer and transition to FIRING when elapsed
+        double shooterActualRPM = m_ShooterMotor.getVelocity().getValueAsDouble() * 60.0;
+        double acceleratorActualRPM = m_AccelerateMotor.getVelocity().getValueAsDouble() * 60.0;
+
         if (m_status == ShooterStatus.PREWARMUP) {
-            setShooterVelocity(1500 / 60);
+            // Fixed: setter expects RPM, not RPS
+            setShooterVelocity(kIdleShooterRPM);
+
+        } else if (m_status == ShooterStatus.COASTING_TO_IDLE) {
+            // Let the wheel coast naturally until it gets near idle speed,
+            // then softly catch it with the low-P idle slot.
+            if (shooterActualRPM <= kIdleCaptureRPM) {
+                engageShooterIdle();
+            }
+
         } else if (m_status == ShooterStatus.WARMUP) {
 
             if (isInOwnAllianceZone()) {
@@ -361,37 +434,36 @@ public class Shooter extends SubsystemBase {
 
             double elapsed = m_warmupTimer.get();
             if (elapsed >= ShooterConstants.kWarmupSeconds) {
-                // warmup complete -> enter FIRING state
                 setStatus(ShooterStatus.FIRING);
                 m_warmupTimer.stop();
             } else {
-                if ((m_ShooterMotor.getVelocity().getValueAsDouble() * 60 >= m_shooterTargetRPM * 0.9) &&
-                        (m_AccelerateMotor.getVelocity().getValueAsDouble() * 60 >= m_acceleratorTargetRPM * 0.9)) {
-                    // If both shooter and accelerator are at least 90% up to speed, we can
-                    // transition to FIRING early
+                if ((shooterActualRPM >= m_shooterTargetRPM * 0.9) &&
+                        (acceleratorActualRPM >= m_acceleratorTargetRPM * 0.9)) {
                     setStatus(ShooterStatus.FIRING);
                     m_warmupTimer.stop();
                 }
             }
-        } else if (m_status != ShooterStatus.FIRING)
+        } else if (m_status != ShooterStatus.FIRING) {
             m_Hood.setAngle(0);
+        }
 
         runThisCycle = !runThisCycle;
         if (!runThisCycle) {
-            return; // Skip this cycle to reduce load (adjust as needed)
+            return;
         }
 
         m_lineOfSite = canSeeAllianceTag("limelight");
+
         // todo add case for limelight-rear
-        if (m_lineOfSite)
-            if(rangeMeters > 3 && rangeMeters < 3.5) {
+        if (m_lineOfSite) {
+            if (rangeMeters > 3 && rangeMeters < 3.5) {
                 m_ledSupplier.get().setYellow(false);
-            }
-            else if (rangeMeters < 3) {
+            } else if (rangeMeters < 3) {
                 m_ledSupplier.get().setGreen(false);
             }
-        else
+        } else {
             m_ledSupplier.get().setRed(false);
+        }
 
         if (Constants.kVerboseDashboard) {
             SmartDashboard.putNumber("Shooter/Hood Actuator Angle", hoodActuatorAngle);
@@ -400,11 +472,11 @@ public class Shooter extends SubsystemBase {
             SmartDashboard.putNumber("Shooter/Distance Target", rangeMeters);
             SmartDashboard.putNumber("Shooter/TargetAngle", targetAngle);
             SmartDashboard.putNumber("Shooter/TargetRPM", m_shooterTargetRPM);
-            SmartDashboard.putNumber("Shooter/ActualRPM", m_ShooterMotor.getVelocity().getValueAsDouble() * 60);
+            SmartDashboard.putNumber("Shooter/ActualRPM", shooterActualRPM);
             SmartDashboard.putNumber("Shooter/AcceleratorTargetRPM", m_acceleratorTargetRPM);
-            SmartDashboard.putNumber("Shooter/AcceleratorActualRPM",
-                    m_AccelerateMotor.getVelocity().getValueAsDouble() * 60);
+            SmartDashboard.putNumber("Shooter/AcceleratorActualRPM", acceleratorActualRPM);
             SmartDashboard.putNumber("Rotation to alliance hub", getRotationToAllianceHub().getDegrees());
+            SmartDashboard.putString("Shooter/State", m_status.name());
         }
     }
 
@@ -431,5 +503,4 @@ public class Shooter extends SubsystemBase {
         else
             return ShooterConstants.kBlueRightPass;
     }
-
 }

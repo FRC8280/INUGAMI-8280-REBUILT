@@ -17,7 +17,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "Left Neutral Intake"
+                  "pathName": "Right Neutral Intake v2"
                 }
               },
               {
@@ -32,13 +32,32 @@
         {
           "type": "named",
           "data": {
-            "name": "Stop Intake"
+            "name": "Shoot"
           }
         },
         {
-          "type": "path",
+          "type": "wait",
           "data": {
-            "pathName": "Left Neutral First Score"
+            "waitTime": 2.5
+          }
+        },
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "Stop Shooter"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Right Second Score - 503 (DO NOT USE AT COMP)"
+                }
+              }
+            ]
           }
         },
         {
@@ -50,7 +69,7 @@
         {
           "type": "wait",
           "data": {
-            "waitTime": 5.0
+            "waitTime": 3.0
           }
         },
         {

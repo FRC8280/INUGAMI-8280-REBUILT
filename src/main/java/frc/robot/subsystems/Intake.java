@@ -41,11 +41,11 @@ public class Intake extends SubsystemBase {
         m_RollerMotor = new TalonFX(IntakeConstants.kRollerIntakeMotorId);
 
         //Setup CanCoder/Configuration
-        m_ThroughBoreEncoder = new CANcoder(IntakeConstants.kAbsEncoderId);
+        /*m_ThroughBoreEncoder = new CANcoder(IntakeConstants.kAbsEncoderId);
         CANcoderConfiguration canCoderConfig = new CANcoderConfiguration();
         canCoderConfig.MagnetSensor.MagnetOffset = canCoderZero;
         canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive; // Or CounterClockwise_Positive
-        m_ThroughBoreEncoder.getConfigurator().apply(canCoderConfig);
+        m_ThroughBoreEncoder.getConfigurator().apply(canCoderConfig);*/
 
         //Pivot Motor Configuration
         CurrentLimitsConfigs pivotLimits = new CurrentLimitsConfigs();
@@ -59,10 +59,10 @@ public class Intake extends SubsystemBase {
         PivotConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
         Slot0Configs intakeGains = PivotConfigs.Slot0;
-        intakeGains.kG = 0.01; // Add 0.5 V output to overcome gravity at the pivot's center of mass
-        intakeGains.kP = 0.75;//20 // A position error of 2.5 rotations results in 12 V output
+        intakeGains.kG = 0.01;//0.1; // Add 0.5 V output to overcome gravity at the pivot's center of mass
+        intakeGains.kP = 0.75;//27.5;//20 // A position error of 2.5 rotations results in 12 V output
         intakeGains.kI = 0; // no output for integrated error
-        intakeGains.kD = 0.1; // A velocity error of 1 rps results in 0.1 V output
+        intakeGains.kD = 0.1; //2; // A velocity error of 1 rps results in 0.1 V output
 
         /*MotionMagicConfigs pivotMotionMagic = PivotConfigs.MotionMagic;
         pivotMotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity of 80 rps
@@ -70,12 +70,12 @@ public class Intake extends SubsystemBase {
         pivotMotionMagic.MotionMagicJerk = 1600; // Target jerk of 1600 rps/s/s (0.1 seconds)*/
 
         //Setup the motor to use the cancoder
-        FeedbackConfigs feedbackConfigs = new FeedbackConfigs();
+        /*FeedbackConfigs feedbackConfigs = new FeedbackConfigs();
         feedbackConfigs.FeedbackSensorSource = com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RemoteCANcoder;
         feedbackConfigs.FeedbackRemoteSensorID = m_ThroughBoreEncoder.getDeviceID();
         feedbackConfigs.SensorToMechanismRatio = 1.0;
         feedbackConfigs.RotorToSensorRatio = 60.0;
-        PivotConfigs.Feedback = feedbackConfigs;
+        PivotConfigs.Feedback = feedbackConfigs;*/
 
         m_PivotMotor.getConfigurator().apply(PivotConfigs);
         m_PivotMotor.setPosition(0);

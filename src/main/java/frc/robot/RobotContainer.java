@@ -76,7 +76,7 @@ public class RobotContainer {
     private PassingZone passingZone = PassingZone.NOT_PASSING;
     private ShootingState m_shootingState = ShootingState.IDLE;
 
-    private PowerDistribution powerDistributionSystem = new PowerDistribution();
+    //private PowerDistribution powerDistributionSystem = new PowerDistribution();
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     // Supplier defined here
     private final Supplier<Pose2d> drivePoseSupplier = () -> drivetrain.getState().Pose;
@@ -91,11 +91,11 @@ public class RobotContainer {
     private final Timer m_intakeCycleTimer = new Timer();
     private final Timer m_intakeDeployTimer = new Timer();
     private final Timer teleopTimer = new Timer();
-    private static final double kIntakeCycleSeconds = 1.0;
+    private static final double kIntakeCycleSeconds = 0.5;
     private static final double kIntakeDeployDuration = 0.25;
     private boolean m_intakeCycleRunning = false;
 
-    private double driveScaler = 0.80;
+    private double driveScaler = 0.85;
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top
                                                                                         // speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second
@@ -132,9 +132,9 @@ public class RobotContainer {
    
 
     private boolean driverOverride() {
-        return Math.abs(xAxis.getAsDouble()) > deadzone
-                || Math.abs(yAxis.getAsDouble()) > deadzone
-                || Math.abs(rAxis.getAsDouble()) > deadzone;
+       /*  return Math.abs(xAxis.getAsDouble()) > deadzone
+                || Math.abs(yAxis.getAsDouble()) > deadzone || */
+                return Math.abs(rAxis.getAsDouble()) > deadzone;
     }
 
     /* Path follower */
@@ -146,10 +146,9 @@ public class RobotContainer {
         NamedCommands.registerCommand("Shoot", new InstantCommand(() -> StartFiringSequence()));
         NamedCommands.registerCommand("Deploy Intake", new InstantCommand(() -> m_Intake.deployIntake()));
         NamedCommands.registerCommand("Stow Intake", new InstantCommand(() -> m_Intake.stowIntake()));
-        NamedCommands.registerCommand("Aim",
-                new InstantCommand(() -> this.ExecuteAimCommand(m_Shooter.GetAllianceHub())));
         NamedCommands.registerCommand("Start Intake", new InstantCommand(() -> m_Intake.startIntake()));
         NamedCommands.registerCommand("Stop Intake", new InstantCommand(() -> m_Intake.stopIntake()));
+        NamedCommands.registerCommand("Warmup Shooter", new InstantCommand(() -> m_Shooter.engageShooterIdle()));
 
         // DriverStation.silenceJoystickConnectionWarning(true);
         autoChooser = AutoBuilder.buildAutoChooser("Tests");
@@ -172,8 +171,8 @@ public class RobotContainer {
     }
 
     public void periodic() {
-        SmartDashboard.putNumber("PowerSystem/Voltage", powerDistributionSystem.getVoltage());
-        SmartDashboard.putNumber("PowerSystem/Current", powerDistributionSystem.getTotalCurrent());
+        /*SmartDashboard.putNumber("PowerSystem/Voltage", powerDistributionSystem.getVoltage());
+        SmartDashboard.putNumber("PowerSystem/Current", powerDistributionSystem.getTotalCurrent());*/
         // countdownLED.periodic();
     }
 
@@ -224,7 +223,23 @@ public class RobotContainer {
             return;
 
         passingZone = PassingZone.NOT_PASSING;
+        // Disable passing mode on the shooter so periodic() returns to normal setpoints
+        m_Shooter.disablePassingMode();
         CeaseFire();
+    }
+
+    /**
+     * Start the passing sequence: enable shooter passing-mode setpoints and
+     * begin the normal warmup/firing sequence.
+     */
+    public void StartPassingSequence(PassingZone zone) {
+        passingZone = zone;
+        // Use constants for passing RPM/hood angle (from ShooterConstants)
+        m_Shooter.enablePassingMode(Constants.ShooterConstants.kPassRPM, Constants.ShooterConstants.kPassHoodDeg);
+        // Begin normal warmup/firing sequence (this will start the warmup timer and
+        // set the shooter velocity using the passing setpoint already applied in
+        // Shooter.periodic()).
+        StartFiringSequence();
     }
 
     public void CeaseFire() {
@@ -260,6 +275,12 @@ public class RobotContainer {
     // PID used for auto-aiming (outputs radians/sec). Tune these gains.
     private final PIDController aimPID = new PIDController(6.0, 0.0, 0.8);
 
+    // Configure aimPID to treat the input as continuous over [0, 2PI).
+    {
+        aimPID.enableContinuousInput(0.0, 2.0 * Math.PI);
+        aimPID.setTolerance(Math.toRadians(2.0));
+    }
+
     public boolean fIsAutoAiming = false;
     private Command autoAimCommand = null;
     private Translation2d lastTarget = m_Shooter.GetAllianceHub();
@@ -283,6 +304,22 @@ public class RobotContainer {
         return autoAimCommand;
     }
 
+    // Normalize radians to [0, 2PI)
+    private static double normalizeRadians0To2Pi(double angle) {
+        double a = angle % (2.0 * Math.PI);
+        if (a < 0)
+            a += 2.0 * Math.PI;
+        return a;
+    }
+
+    // Convert radians to degrees in [0, 360)
+    private static double radiansToDegrees360(double radians) {
+        double deg = Math.toDegrees(radians) % 360.0;
+        if (deg < 0)
+            deg += 360.0;
+        return deg;
+    }
+
     //Simplify the caluculations by doing this once per cycle. 
     //Allowing other functions to use these values without calculating them. 
     private void CalculateTargetAngles()
@@ -299,9 +336,15 @@ public class RobotContainer {
         var pose = drivetrain.getState().Pose;
         double dx = lastTarget.getX() - pose.getX();
         double dy = lastTarget.getY() - pose.getY();
-        m_desiredAngle = Math.atan2(dy, dx); // radians
-        m_currentAngle = pose.getRotation().getRadians();
+        // Compute raw angles (radians)
+        double desiredRaw = Math.atan2(dy, dx);
+        double currentRaw = pose.getRotation().getRadians();
 
+        // Normalize both angles to [0, 2PI) to avoid wraparound issues
+        m_desiredAngle = normalizeRadians0To2Pi(desiredRaw);
+        m_currentAngle = normalizeRadians0To2Pi(currentRaw);
+
+        // Compute shortest signed angle error in radians (in range [-PI, PI])
         m_angleError = Math.atan2(Math.sin(m_desiredAngle - m_currentAngle),
                                        Math.cos(m_desiredAngle - m_currentAngle));
         // Choose threshold depending on alliance (30° normally, 145° when on Red)
@@ -309,7 +352,7 @@ public class RobotContainer {
         double thresholdDeg = (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) ? 140.0 : 30.0;
         // if the absolute angle to target is greater than the threshold, apply a 7-degree bias
         if (Math.abs(m_angleError) > Math.toRadians(thresholdDeg)) {
-            double bias = Math.toRadians(15.5);//7.0);
+            double bias = Math.toRadians(7.75);//15.5);//7.0);
             if (m_angleError < 0) {
                 m_desiredAngle -= bias; // compensate more negative
             } else {
@@ -319,15 +362,16 @@ public class RobotContainer {
             m_angleError = Math.atan2(Math.sin(m_desiredAngle - m_currentAngle), Math.cos(m_desiredAngle - m_currentAngle));
         }
 
-        m_matchPercent = (1.0 - Math.min(1.0, Math.abs(m_angleError) / Math.PI)) * 100.0;
+    m_matchPercent = (1.0 - Math.min(1.0, Math.abs(m_angleError) / Math.PI)) * 100.0;
 
         boolean withinAimTolerance = fIsAutoAiming && lastTarget != null
                 && IsRobotAlignedToTarget();
         SmartDashboard.putBoolean("AngleWithinTolerance", withinAimTolerance);
         SmartDashboard.putNumber("AngleError (deg)", Math.toDegrees(m_angleError));
         SmartDashboard.putNumber("AngleMatchPercent", m_matchPercent);
-        SmartDashboard.putNumber("Current Angle (deg)", Math.toDegrees(m_currentAngle));
-        SmartDashboard.putNumber("Desired Angle (deg)", Math.toDegrees(m_desiredAngle));
+        // Publish normalized angles in 0-360 degrees for readability
+        SmartDashboard.putNumber("Current Angle (deg)", radiansToDegrees360(m_currentAngle));
+        SmartDashboard.putNumber("Desired Angle (deg)", radiansToDegrees360(m_desiredAngle));
         
     }
 
@@ -518,12 +562,6 @@ public class RobotContainer {
                  .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
         shootFuelButton.onFalse(new InstantCommand(() -> CeaseFire()));
 
-        // set fIsAutoAiming when we are in any shooting state or in a passing zone
-        /*new Trigger(() -> m_shootingState != ShootingState.IDLE
-                || passingZone != PassingZone.NOT_PASSING)
-                .onTrue(new InstantCommand(() -> fIsAutoAiming = true))
-                .onFalse(new InstantCommand(() -> fIsAutoAiming = false));*/
-
         // While the shooter is firing, periodically bring the intake up to feed,
         // then stow it after a short deploy duration. Stops when shooter stops firing.
         new Trigger(() -> this.ReadyToFire()) // m_Shooter.IsReadyToFire())
@@ -587,17 +625,15 @@ public class RobotContainer {
                 .alongWith(new InstantCommand(() -> m_Indexer.stopIndexer())));
 
         // Passing Controls
-        JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Left);
-        passZone4.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Left)
-                .alongWith(new InstantCommand(() -> StartFiringSequence()))
-                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseLeftButton()))));
-         passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Left)));
+    JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Left);
+    passZone4.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Left))
+        .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseLeftButton()))));
+     passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Left)));
 
-        JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Right);
-        passZone5.whileTrue(new InstantCommand(() -> passingZone = PassingZone.Zone_Right)
-                .alongWith(new InstantCommand(() -> StartFiringSequence()))
-                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseRightButton()))));
-         passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Right)));
+    JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Right);
+    passZone5.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Right))
+        .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseRightButton()))));
+     passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Right)));
 
         JoystickButton warmUpButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.WarmupShooter);
