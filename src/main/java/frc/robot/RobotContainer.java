@@ -34,14 +34,14 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.PowerDistribution;
+//import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.Timer;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
 //import dev.doglog.DogLog;
 //import dev.doglog.DogLogOptions;
-import frc.robot.commands.RotateToPointCommand;
+//import frc.robot.commands.RotateToPointCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LEDSubsystem;
@@ -52,12 +52,12 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 public class RobotContainer {
 
-    enum AlignmentState {
+    /*enum AlignmentState {
         IDLE,
         ALIGNING
     }
 
-    private AlignmentState m_alignmentState = AlignmentState.IDLE;
+    private AlignmentState m_alignmentState = AlignmentState.IDLE;*/
 
     enum ShootingState {
         IDLE,
@@ -123,8 +123,8 @@ public class RobotContainer {
     private final double deadzone = 0.10; // Adjust this value as needed
 
     // Example axis suppliers (adjust for your controller)
-    private final DoubleSupplier xAxis = () -> -driver.getLeftY(); // forward/back
-    private final DoubleSupplier yAxis = () -> -driver.getLeftX(); // strafe
+    /*private final DoubleSupplier xAxis = () -> -driver.getLeftY(); // forward/back
+    private final DoubleSupplier yAxis = () -> -driver.getLeftX(); // strafe*/
     private final DoubleSupplier rAxis = () -> -driver.getRightX(); // manual rotate
 
     private final Timer m_warmupTimer = new Timer();
@@ -258,7 +258,7 @@ public class RobotContainer {
         m_Shooter.CeaseFire();
         m_Indexer.stopIndexer();
         m_warmupTimer.stop();
-        m_alignmentState = AlignmentState.IDLE;
+        //m_alignmentState = AlignmentState.IDLE;
         m_Intake.deployIntake();
     }
 
@@ -291,7 +291,7 @@ public class RobotContainer {
     private double m_angleError = 0.0;
     private double m_matchPercent = 0.0;
 
-    private Command ExecuteAimCommand(Translation2d target) {
+    /*private Command ExecuteAimCommand(Translation2d target) {
 
         lastTarget = target;
         autoAimCommand = new RotateToPointCommand(
@@ -302,7 +302,7 @@ public class RobotContainer {
                 () -> driverOverride());
 
         return autoAimCommand;
-    }
+    }*/
 
     // Normalize radians to [0, 2PI)
     private static double normalizeRadians0To2Pi(double angle) {

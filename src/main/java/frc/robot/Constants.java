@@ -90,6 +90,9 @@ public class Constants {
         public static final int kShooterMotorId = 30;
         public static final int kShooterCurrentLimit = 40;
         public static final int kFollowerMotorId = 31;
+    // Additional follower motors (CAN IDs 32 and 33)
+    public static final int kFollowerMotorLeft1Id = 32;
+    public static final int kFollowerMotorRight1Id = 33;
 
         public static final int kAccelerateCurrentLimit = 30;
         public static final int kAccelerateMotorId = 16;
@@ -117,6 +120,25 @@ public class Constants {
 
         public static double kPassRPM = 5000;
         public static int kPassHoodDeg = 45;
+    }
+
+    public static final class HoodConstants {
+        // CAN ID for the hood Talon (tunable for your robot wiring)
+        public static final int kHoodMotorId = 40;
+
+        // Second calibration setpoint: motor rotations corresponding to the
+        // hood angle defined in kHoodAngleB. Tune kHoodSetpointB through testing.
+        public static final double kHoodSetpointB = 5.3; // rotations (placeholder)
+        public static final double kHoodAngleB = 15.0;   // degrees (placeholder)
+        
+        // Hood motor current limit (amps)
+        public static final int kHoodSupplyCurrentLimit = 20;
+
+        // Position PID gains for hood (slot 0)
+        public static final double kHoodKG = 0.0; // feedforward
+        public static final double kHoodKP = 1.0; // proportional
+        public static final double kHoodKI = 0.0; // integral
+        public static final double kHoodKD = 0.05; // derivative
     }
 
     public static final class EmergencyOperatorControls{

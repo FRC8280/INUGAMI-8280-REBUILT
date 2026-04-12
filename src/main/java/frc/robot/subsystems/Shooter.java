@@ -66,8 +66,11 @@ public class Shooter extends SubsystemBase {
     // Declare variables
     private final Supplier<Pose2d> m_robotPoseSupplier;
 
-    private TalonFX m_ShooterMotor;
-    private TalonFX m_FollowerMotor;
+    private TalonFX m_ShooterMotorLeft0;
+    private TalonFX m_FollowerMotorLeft1;
+    private TalonFX m_FollowerMotorRight0;
+    private TalonFX m_FollowerMotorRight1;
+
     private TalonFX m_AccelerateMotor;
     private ShooterLookup m_ShooterLookup;
 
@@ -75,12 +78,9 @@ public class Shooter extends SubsystemBase {
     double m_acceleratorTargetRPM = 0;
     boolean m_lineOfSite = false;
 
-    private final VelocityVoltage shooterVelocityRequest =
-            new VelocityVoltage(0).withSlot(kShootSlot);
-    private final VelocityVoltage shooterIdleVelocityRequest =
-            new VelocityVoltage(0).withSlot(kIdleSlot);
-    private final VelocityVoltage acceleratorVelocityRequest =
-            new VelocityVoltage(0).withSlot(kShootSlot);
+    private final VelocityVoltage shooterVelocityRequest = new VelocityVoltage(0).withSlot(kShootSlot);
+    private final VelocityVoltage shooterIdleVelocityRequest = new VelocityVoltage(0).withSlot(kIdleSlot);
+    private final VelocityVoltage acceleratorVelocityRequest = new VelocityVoltage(0).withSlot(kShootSlot);
 
     ServoHubConfig config;
     public final HoodSystem m_Hood;
@@ -102,8 +102,11 @@ public class Shooter extends SubsystemBase {
          * .subscribe(false);
          */
 
-        m_ShooterMotor = new TalonFX(ShooterConstants.kShooterMotorId);
-        m_FollowerMotor = new TalonFX(ShooterConstants.kFollowerMotorId);
+        m_ShooterMotorLeft0 = new TalonFX(ShooterConstants.kShooterMotorId);
+        m_FollowerMotorRight0 = new TalonFX(ShooterConstants.kFollowerMotorId);
+        // Additional shooter motors
+        m_FollowerMotorLeft1 = new TalonFX(ShooterConstants.kFollowerMotorLeft1Id);
+        m_FollowerMotorRight1 = new TalonFX(ShooterConstants.kFollowerMotorRight1Id);
         m_AccelerateMotor = new TalonFX(ShooterConstants.kAccelerateMotorId);
 
         TalonFXConfiguration shooterConfig = new TalonFXConfiguration();
@@ -140,9 +143,15 @@ public class Shooter extends SubsystemBase {
          * shooterMotionMagic.MotionMagicJerk = 1600;
          */
 
-        m_ShooterMotor.getConfigurator().apply(shooterConfig);
-        m_FollowerMotor.getConfigurator().apply(shooterConfig);
-        m_FollowerMotor.setControl(new Follower(m_ShooterMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+        m_ShooterMotorLeft0.getConfigurator().apply(shooterConfig);
+        m_FollowerMotorRight0.getConfigurator().apply(shooterConfig);
+        m_FollowerMotorLeft1.getConfigurator().apply(shooterConfig);
+        m_FollowerMotorRight1.getConfigurator().apply(shooterConfig);
+
+        // Configure followers: both new motors follow the primary left leader
+        // Left1 follows with same alignment as the leader; Right followers are opposed
+        m_FollowerMotorRight0.setControl(new Follower(m_ShooterMotorLeft0.getDeviceID(), MotorAlignmentValue.Opposed));
+        m_FollowerMotorRight1.setControl(new Follower(m_ShooterMotorLeft0.getDeviceID(), MotorAlignmentValue.Opposed));
 
         // Setup preshot acceleration stage
         TalonFXConfiguration accelConfig = new TalonFXConfiguration();
@@ -192,7 +201,8 @@ public class Shooter extends SubsystemBase {
     public void DeactivatePreShot() {
         System.out.println("Deactivate Preshot.");
 
-        if (m_status == ShooterStatus.PREWARMUP || m_status == ShooterStatus.FIRING || m_status == ShooterStatus.WARMUP) {
+        if (m_status == ShooterStatus.PREWARMUP || m_status == ShooterStatus.FIRING
+                || m_status == ShooterStatus.WARMUP) {
             beginCoastToIdle();
             return;
         }
@@ -224,7 +234,7 @@ public class Shooter extends SubsystemBase {
         setStatus(ShooterStatus.COASTING_TO_IDLE);
 
         // Let the shooter coast naturally. No braking, no velocity control yet.
-        m_ShooterMotor.setControl(neutralOut);
+        m_ShooterMotorLeft0.setControl(neutralOut);
 
         // Accelerator is not being held at idle; let it neutral out fully.
         m_AccelerateMotor.setControl(neutralOut);
@@ -233,7 +243,7 @@ public class Shooter extends SubsystemBase {
 
     public void engageShooterIdle() {
         m_shooterTargetRPM = kIdleShooterRPM;
-        m_ShooterMotor.setControl(
+        m_ShooterMotorLeft0.setControl(
                 shooterIdleVelocityRequest.withVelocity(kIdleShooterRPM / 60.0));
         setStatus(ShooterStatus.IDLE);
     }
@@ -241,9 +251,9 @@ public class Shooter extends SubsystemBase {
     public void setShooterVelocity(double velocity) {
         m_shooterTargetRPM = velocity;
         if (velocity > 0) {
-            m_ShooterMotor.setControl(shooterVelocityRequest.withVelocity(velocity / 60.0));
+            m_ShooterMotorLeft0.setControl(shooterVelocityRequest.withVelocity(velocity / 60.0));
         } else {
-            m_ShooterMotor.setControl(neutralOut);
+            m_ShooterMotorLeft0.setControl(neutralOut);
         }
     }
 
@@ -364,7 +374,7 @@ public class Shooter extends SubsystemBase {
     // enabled by RobotContainer when performing passes between robots.
     private boolean fPassing = false;
     private double m_passingTargetRPM = 0.0; // RPM
-    private double m_passingHoodDeg = 0.0;   // hood degrees
+    private double m_passingHoodDeg = 0.0; // hood degrees
 
     /**
      * Enable passing override: shooter will use provided RPM and hood angle
@@ -412,7 +422,7 @@ public class Shooter extends SubsystemBase {
         }
         hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle - targetAngle;
 
-        double shooterActualRPM = m_ShooterMotor.getVelocity().getValueAsDouble() * 60.0;
+        double shooterActualRPM = m_ShooterMotorLeft0.getVelocity().getValueAsDouble() * 60.0;
         double acceleratorActualRPM = m_AccelerateMotor.getVelocity().getValueAsDouble() * 60.0;
 
         if (m_status == ShooterStatus.PREWARMUP) {
