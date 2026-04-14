@@ -101,14 +101,16 @@ public class Constants {
 
         public static final double kShooterTargetVelocity = 240; // RPM
         public static final double kDefaultShotAngleDeg = 60.0; // Default shot angle in degrees
-        public static final double kHoodMinDeg = 0.0; // Minimum hood angle in degrees
-        public static final double kHoodMaxDeg = 15.0; // Maximum hood angle in degrees
+    public static final double kHoodMinDeg = 25.0; // Minimum hood angle in degrees
+    public static final double kHoodMaxDeg = 70.0; // Maximum hood angle in degrees
 
         public static final Set<Integer> BLUE_TAGS = Set.of(25,26,21,24,18,27);
         public static final Set<Integer> RED_TAGS = Set.of(9,10,11,12,8,5);
 
-        public static final double kShooterDefaultAngle = 60.0;
+        public static final double kShooterDefaultAngle = 70.0;
         public static final double kWarmupSeconds = 2.0;
+        // Preshot accelerator RPM used during WarmupShooter pre-shot stage
+       public static final double kPreShotRPM = 3000;
 
         public static Translation2d kBlueLeftPass = new Translation2d(0.5, 7.5);
         public static Translation2d kBlueRightPass = new Translation2d(0.5, 0.5);
@@ -118,7 +120,7 @@ public class Constants {
         public static Translation2d BlueHub = new Translation2d(4.85, 4.0);
         public static Translation2d RedHub = new Translation2d(11.89, 4.035);
 
-        public static double kPassRPM = 5000;
+        public static double kPassRPM = 3000;
         public static int kPassHoodDeg = 45;
     }
 
@@ -128,16 +130,26 @@ public class Constants {
 
         // Second calibration setpoint: motor rotations corresponding to the
         // hood angle defined in kHoodAngleB. Tune kHoodSetpointB through testing.
-        public static final double kHoodSetpointB = 5.3; // rotations (placeholder)
-        public static final double kHoodAngleB = 15.0;   // degrees (placeholder)
+        // A named retracted/home angle constant (degrees)
+        public static final double kRetractedAngle = 70.0;
+
+        // Calibration point A: starting/home position
+        // Hood angle A (degrees) corresponds to motor rotations A
+        public static final double kHoodAngleA = kRetractedAngle;   // degrees (motor position 0)
+        public static final double kHoodSetpointA = 0.0; // rotations
+
+        // Calibration point B: max (lower) hood position
+        // Hood angle B (degrees) corresponds to motor rotations B
+        public static final double kHoodAngleB = 25.0;   // degrees
+        public static final double kHoodSetpointB = 5.0; // rotations
         
         // Hood motor current limit (amps)
         public static final int kHoodSupplyCurrentLimit = 20;
 
         // Position PID gains for hood (slot 0)
         public static final double kHoodKG = 0.0; // feedforward
-        public static final double kHoodKP = 1.0; // proportional
-        public static final double kHoodKI = 0.0; // integral
+        public static final double kHoodKP = 1.5; // proportional
+        public static final double kHoodKI = 0.01; // integral
         public static final double kHoodKD = 0.05; // derivative
     }
 
@@ -157,10 +169,10 @@ public class Constants {
         public static final int Right = 6;
         /*public static final int Zone4 = 4;
         public static final int Zone5 = 5;
-        public static final int Zone6 = 6;
-        public static final int Zone1 = 7;
-        public static final int Zone2 = 8;
-        public static final int Zone3 = 9;*/
+        public static final int Zone6 = 6;*/
+        public static final int HoodLow = 7;
+        public static final int HoodMid = 8;
+        public static final int HoodHigh = 9;
     }
 }
     

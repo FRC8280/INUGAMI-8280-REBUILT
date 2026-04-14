@@ -2,11 +2,12 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXSConfiguration;
 import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.hardware.TalonFXS;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorArrangementValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
@@ -22,14 +23,14 @@ import frc.robot.Constants;
  * positional control (PositionVoltage) to move to target positions. A small
  * interpolation table maps desired hood angles (degrees) to motor position
  * rotations; initially the table contains two points:
- * - angle 0 -> motor position 0 (initialized)
- * - angle kHoodAngleB -> motor position kHoodSetpointB (tunable)
+ * - angle kHoodAngleA -> motor position kHoodSetpointA (home/start)
+ * - angle kHoodAngleB -> motor position kHoodSetpointB (max/lowered)
  *
- * Tune kHoodSetpointB in `Constants.HoodConstants` through trial and error.
+ * Tune the calibration points in `Constants.HoodConstants` through testing.
  */
 public class HoodSystem extends SubsystemBase {
 
-    private final TalonFX m_hoodMotor;
+    private final TalonFXS m_hoodMotor;
     private final NeutralOut neutralOut = new NeutralOut();
 
     // Interpolator mapping from hood angle (deg) -> motor position (rotations)
@@ -38,12 +39,14 @@ public class HoodSystem extends SubsystemBase {
     private double m_currentAngleDeg = 0.0;
 
     public HoodSystem() {
-        m_hoodMotor = new TalonFX(Constants.HoodConstants.kHoodMotorId);
+        m_hoodMotor = new TalonFXS(Constants.HoodConstants.kHoodMotorId);
 
         // Motor configuration
-        TalonFXConfiguration cfg = new TalonFXConfiguration();
+        TalonFXSConfiguration cfg = new TalonFXSConfiguration();
         cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         cfg.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+
+        cfg.Commutation.MotorArrangement = MotorArrangementValue.Minion_JST;
 
         CurrentLimitsConfigs limits = cfg.CurrentLimits;
         limits.SupplyCurrentLimitEnable = true;
@@ -66,10 +69,12 @@ public class HoodSystem extends SubsystemBase {
         // Also set the output to neutral so the motor holds position safely.
         m_hoodMotor.setControl(neutralOut);
 
-        // Build the simple two-point lookup table. Keys are hood angles (deg),
-        // values are motor rotations.
-        angleToPosition.put(0.0, 0.0);
-        angleToPosition.put(Constants.HoodConstants.kHoodAngleB, Constants.HoodConstants.kHoodSetpointB);
+    // Build the simple two-point lookup table. Keys are hood angles (deg),
+    // values are motor rotations.
+    // Calibration point A (home): hood angle A -> motor rotations A
+    angleToPosition.put(Constants.HoodConstants.kHoodAngleA, Constants.HoodConstants.kHoodSetpointA);
+    // Calibration point B (max/lowered): hood angle B -> motor rotations B
+    angleToPosition.put(Constants.HoodConstants.kHoodAngleB, Constants.HoodConstants.kHoodSetpointB);
 
         // Publish initial state (only when verbose dashboard enabled)
         if (Constants.kVerboseDashboard) {
@@ -96,11 +101,15 @@ public class HoodSystem extends SubsystemBase {
      * @param angleDeg desired hood angle in degrees
      */
     public void setAngle(double angleDeg) {
-        // Clamp angle within known interpolation range
-        double clamped = Math.max(0.0, Math.min(Constants.ShooterConstants.kHoodMaxDeg, angleDeg));
 
-        // InterpolatingDoubleTreeMap.get() will return nearest endpoint if outside
-        // range, and interpolate between points otherwise.
+        // Clamp angle within known interpolation range (use the two calibration
+        // points to derive min/max so the clamp follows constants in HoodConstants)
+        double minAngle = Math.min(Constants.HoodConstants.kHoodAngleA, Constants.HoodConstants.kHoodAngleB);
+        double maxAngle = Math.max(Constants.HoodConstants.kHoodAngleA, Constants.HoodConstants.kHoodAngleB);
+        double clamped = Math.max(minAngle, Math.min(maxAngle, angleDeg));
+
+        // InterpolatingDoubleTreeMap.get() will return nearest endpoint if
+        // outside range, and interpolate between points otherwise.
         double motorRotations = angleToPosition.get(clamped);
 
         // Command the motor using position control
@@ -112,7 +121,7 @@ public class HoodSystem extends SubsystemBase {
         if (Constants.kVerboseDashboard) {
             SmartDashboard.putNumber("Hood/CommandedAngleDeg", clamped);
             SmartDashboard.putNumber("Hood/CommandedMotorRotations", motorRotations);
-        }
+        } 
     }
 
     /**

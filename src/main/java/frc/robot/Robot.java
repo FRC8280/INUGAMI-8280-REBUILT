@@ -90,28 +90,64 @@ public class Robot extends TimedRobot {
             LimelightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
             var llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
             if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
-                m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
-                m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
+                // Check distance between current robot pose and vision-provided pose.
+                var robotPose = m_robotContainer.drivetrain.getState().Pose;
+                double dx = robotPose.getX() - llMeasurement.pose.getX();
+                double dy = robotPose.getY() - llMeasurement.pose.getY();
+                double visionDist = Math.hypot(dx, dy);
+
+                // Only accept the vision measurement if it's within 3 meters of
+                // the robot's current pose, unless the robot has not yet been
+                // gyro-seeded (first activation) in which case we allow it to
+                // help establish an initial pose.
+                boolean accept = (visionDist <= 3.0) || (!gyroSeeded);
+
+                if (accept) {
+                    m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
+                    m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
+                } else {
+                    // Optionally publish rejection info for debugging
+                    if (Constants.kVerboseDashboard) {
+                        SmartDashboard.putNumber("Front LL-RejectDistance", visionDist);
+                    }
+                }
 
                 if (Constants.kVerboseDashboard) {
                     SmartDashboard.putNumber("Front LL-X", llMeasurement.pose.getX());
                     SmartDashboard.putNumber("Front LL-Y", llMeasurement.pose.getY());
                     SmartDashboard.putNumber("Front LL-TagCount", llMeasurement.tagCount);
+                    SmartDashboard.putNumber("Front LL-Distance", visionDist);
+                    SmartDashboard.putBoolean("Front LL-Accepted", accept);
                 }
             } else if (secondLimeLight) {
                 LimelightHelpers.SetIMUAssistAlpha("limelight-rear", 0.001);
                 LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0, 0, 0);
                 llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
                 if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
-                    m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
-                    m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose,
-                            llMeasurement.timestampSeconds);
-                }
+                    var robotPose = m_robotContainer.drivetrain.getState().Pose;
+                    double dx = robotPose.getX() - llMeasurement.pose.getX();
+                    double dy = robotPose.getY() - llMeasurement.pose.getY();
+                    double visionDist = Math.hypot(dx, dy);
 
-                if (Constants.kVerboseDashboard) {
-                    SmartDashboard.putNumber("Rear LL-X", llMeasurement.pose.getX());
-                    SmartDashboard.putNumber("Rear LL-Y", llMeasurement.pose.getY());
-                    SmartDashboard.putNumber("Rear LL-TagCount", llMeasurement.tagCount);
+                    boolean accept = (visionDist <= 3.0) || (!gyroSeeded);
+
+                    if (accept) {
+                        m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
+                        m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose,
+                                llMeasurement.timestampSeconds);
+                    } else {
+                        if (Constants.kVerboseDashboard) {
+                            SmartDashboard.putNumber("Rear LL-RejectDistance", visionDist);
+                        }
+                    }
+
+                    if (Constants.kVerboseDashboard) {
+                        SmartDashboard.putNumber("Rear LL-X", llMeasurement.pose.getX());
+                        SmartDashboard.putNumber("Rear LL-Y", llMeasurement.pose.getY());
+                        SmartDashboard.putNumber("Rear LL-TagCount", llMeasurement.tagCount);
+                        SmartDashboard.putNumber("Rear LL-Distance", visionDist);
+                        SmartDashboard.putBoolean("Rear LL-Accepted", accept);
+                    }
                 }
             }
         }

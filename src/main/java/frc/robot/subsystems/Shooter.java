@@ -218,7 +218,7 @@ public class Shooter extends SubsystemBase {
     public void WarmupShooter() {
         setStatus(ShooterStatus.WARMUP);
         setShooterVelocity(m_shooterTargetRPM);
-        SetPreShotVelocity(3000); // 2500
+    SetPreShotVelocity(ShooterConstants.kPreShotRPM);
 
         m_warmupTimer.reset();
         m_warmupTimer.start();
@@ -226,7 +226,7 @@ public class Shooter extends SubsystemBase {
 
     public void CeaseFire() {
         beginCoastToIdle();
-        m_Hood.setAngle(0);
+        m_Hood.setAngle(70);
         m_warmupTimer.stop();
     }
 
@@ -374,7 +374,7 @@ public class Shooter extends SubsystemBase {
     // enabled by RobotContainer when performing passes between robots.
     private boolean fPassing = false;
     private double m_passingTargetRPM = 0.0; // RPM
-    private double m_passingHoodDeg = 0.0; // hood degrees
+    private double m_passingHoodDeg = 35.0; // hood degrees
 
     /**
      * Enable passing override: shooter will use provided RPM and hood angle
@@ -408,7 +408,7 @@ public class Shooter extends SubsystemBase {
 
         double rangeMeters = -1.0;
         double targetAngle = -1.0;
-        double hoodActuatorAngle = 0;
+        double hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle;
 
         rangeMeters = distanceToAllianceHub();
         if (fPassing) {
@@ -420,7 +420,7 @@ public class Shooter extends SubsystemBase {
             m_shooterTargetRPM = sp.rpm();
             targetAngle = sp.hoodDeg();
         }
-        hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle - targetAngle;
+        hoodActuatorAngle =  targetAngle;
 
         double shooterActualRPM = m_ShooterMotorLeft0.getVelocity().getValueAsDouble() * 60.0;
         double acceleratorActualRPM = m_AccelerateMotor.getVelocity().getValueAsDouble() * 60.0;
@@ -454,7 +454,7 @@ public class Shooter extends SubsystemBase {
                 }
             }
         } else if (m_status != ShooterStatus.FIRING) {
-            m_Hood.setAngle(0);
+            m_Hood.setAngle(ShooterConstants.kShooterDefaultAngle);
         }
 
         runThisCycle = !runThisCycle;
