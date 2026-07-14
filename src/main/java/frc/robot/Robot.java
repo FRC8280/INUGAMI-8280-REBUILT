@@ -17,14 +17,24 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
 
 //import dev.doglog.DogLog;
 //import dev.doglog.DogLogOptions;
 
 public class Robot extends TimedRobot {
-    private boolean secondLimeLight = false;
+
+    private NetworkTableEntry seedGyroButton;
+    // Track last state for edge detection
+    private boolean lastSeedState = false;
+
+    private boolean opModeStarted = false;
+    private boolean secondLimeLight = true;
     private double lastLoopTime = Timer.getFPGATimestamp();
     private final Field2d m_field = new Field2d();
 
@@ -48,10 +58,62 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotInit() {
-        SmartDashboard.putData(
-                "Seed Gyro",
-                Commands.runOnce(this::seedGyro)
-                        .withName("Seed Gyro"));
+
+        // This publishes the button key so dashboards can show it
+        SmartDashboard.putBoolean("SeedGyro", false);
+
+    }
+
+    private boolean shouldAcceptMT2(LimelightHelpers.PoseEstimate estimate, double omegaRps) {
+        if (estimate == null) {
+            return false;
+        }
+
+        // Must see at least one tag
+        if (estimate.tagCount <= 0) {
+            return false;
+        }
+
+        // Reject while spinning fast
+        if (Math.abs(omegaRps) >= 2.0) {
+            return false;
+        }
+
+        // Reject very far measurements
+        if (estimate.avgTagDist > 7.0) {
+            return false;
+        }
+
+        // Far single-tag MT2 is usually sketchy
+        if (estimate.avgTagDist > 4.0 && estimate.tagCount < 2) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean addFilteredMT2Vision(LimelightHelpers.PoseEstimate estimate, double omegaRps) {
+        if (!shouldAcceptMT2(estimate, omegaRps)) {
+            return false;
+        }
+
+        double dist = estimate.avgTagDist;
+
+        // Trust close tags more, far tags less
+        double xyStdDev = 0.35 + (dist * 0.25);
+
+        // If only one tag, trust it less
+        if (estimate.tagCount == 1) {
+            xyStdDev += 0.75;
+        }
+
+        m_robotContainer.drivetrain.setVisionMeasurementStdDevs(
+                VecBuilder.fill(xyStdDev, xyStdDev, 9999999));
+
+        m_robotContainer.drivetrain.addVisionMeasurement(
+                estimate.pose,
+                estimate.timestampSeconds);
+        return true;
     }
 
     @Override
@@ -65,22 +127,16 @@ public class Robot extends TimedRobot {
         m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run();
 
-        if (m_robotContainer != null)
-            m_robotContainer.periodic();
         /*
-         * This example of adding Limelight is very simple and may not be sufficient for
-         * on-field use.
-         * Users typically need to provide a standard deviation that scales with the
-         * distance to target
-         * and changes with number of tags available.
-         *
-         * This example is sufficient to show that vision integration is possible,
-         * though exact implementation
-         * of how to use vision should be tuned per-robot and to the team's
-         * specification.
-         */
+         * if (m_robotContainer != null)
+         * m_robotContainer.periodic();
+         */ // dead code
 
-        if (kUseLimelight) {
+        if (kUseLimelight && !gyroSeeded) {
+            seedGyro(false);
+        }
+
+        if (kUseLimelight && gyroSeeded) {
 
             var driveState = m_robotContainer.drivetrain.getState();
             double headingDeg = driveState.Pose.getRotation().getDegrees();
@@ -88,68 +144,65 @@ public class Robot extends TimedRobot {
 
             LimelightHelpers.SetIMUAssistAlpha("limelight", 0.001);
             LimelightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
+            LimelightHelpers.SetIMUAssistAlpha("limelight-rear", 0.001);
+            LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0, 0, 0);
+
             var llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+            var llRearMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
+
+            // Additional filtering
+            /*
+             * addFilteredMT2Vision(llMeasurement, omegaRps);
+             * if (Constants.kVerboseDashboard) {
+             * SmartDashboard.putNumber("Front LL-X", llMeasurement.pose.getX());
+             * SmartDashboard.putNumber("Front LL-Y", llMeasurement.pose.getY());
+             * SmartDashboard.putNumber("Front LL-TagCount", llMeasurement.tagCount);
+             * }
+             * 
+             * if (secondLimeLight && !opModeStarted) {
+             * addFilteredMT2Vision(llRearMeasurement, omegaRps);
+             * SmartDashboard.putNumber("Rear LL-X", llMeasurement.pose.getX());
+             * SmartDashboard.putNumber("Rear LL-Y", llMeasurement.pose.getY());
+             * SmartDashboard.putNumber("Rear LL-TagCount", llMeasurement.tagCount);
+             * }
+             */
+
             if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
-                // Check distance between current robot pose and vision-provided pose.
-                var robotPose = m_robotContainer.drivetrain.getState().Pose;
-                double dx = robotPose.getX() - llMeasurement.pose.getX();
-                double dy = robotPose.getY() - llMeasurement.pose.getY();
-                double visionDist = Math.hypot(dx, dy);
 
-                // Only accept the vision measurement if it's within 3 meters of
-                // the robot's current pose, unless the robot has not yet been
-                // gyro-seeded (first activation) in which case we allow it to
-                // help establish an initial pose.
-                boolean accept = (visionDist <= 3.0) || (!gyroSeeded);
-
-                if (accept) {
-                    m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
-                    m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
-                } else {
-                    // Optionally publish rejection info for debugging
-                    if (Constants.kVerboseDashboard) {
-                        SmartDashboard.putNumber("Front LL-RejectDistance", visionDist);
-                    }
-                }
+                m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.5,
+                        .5, 9999999));
+                m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose,
+                        llMeasurement.timestampSeconds);
 
                 if (Constants.kVerboseDashboard) {
                     SmartDashboard.putNumber("Front LL-X", llMeasurement.pose.getX());
                     SmartDashboard.putNumber("Front LL-Y", llMeasurement.pose.getY());
                     SmartDashboard.putNumber("Front LL-TagCount", llMeasurement.tagCount);
-                    SmartDashboard.putNumber("Front LL-Distance", visionDist);
-                    SmartDashboard.putBoolean("Front LL-Accepted", accept);
+
                 }
-            } else if (secondLimeLight) {
+            } 
+            /*
+            else if (secondLimeLight && !opModeStarted) { // leon turn this off ifissues
                 LimelightHelpers.SetIMUAssistAlpha("limelight-rear", 0.001);
-                LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0, 0, 0);
+                LimelightHelpers.SetRobotOrientation("limelight-rear", headingDeg, 0, 0, 0,
+                        0, 0);
                 llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
+                // addFilteredMT2Vision(llMeasurement, omegaRps);
                 if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
-                    var robotPose = m_robotContainer.drivetrain.getState().Pose;
-                    double dx = robotPose.getX() - llMeasurement.pose.getX();
-                    double dy = robotPose.getY() - llMeasurement.pose.getY();
-                    double visionDist = Math.hypot(dx, dy);
 
-                    boolean accept = (visionDist <= 3.0) || (!gyroSeeded);
-
-                    if (accept) {
-                        m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
-                        m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose,
-                                llMeasurement.timestampSeconds);
-                    } else {
-                        if (Constants.kVerboseDashboard) {
-                            SmartDashboard.putNumber("Rear LL-RejectDistance", visionDist);
-                        }
-                    }
+                    m_robotContainer.drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.5,
+                            .5, 9999999));
+                    m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose,
+                            llMeasurement.timestampSeconds);
 
                     if (Constants.kVerboseDashboard) {
                         SmartDashboard.putNumber("Rear LL-X", llMeasurement.pose.getX());
                         SmartDashboard.putNumber("Rear LL-Y", llMeasurement.pose.getY());
                         SmartDashboard.putNumber("Rear LL-TagCount", llMeasurement.tagCount);
-                        SmartDashboard.putNumber("Rear LL-Distance", visionDist);
-                        SmartDashboard.putBoolean("Rear LL-Accepted", accept);
                     }
                 }
-            }
+            }*/
+
         }
 
         m_field.setRobotPose(m_robotContainer.drivetrain.getState().Pose);
@@ -163,63 +216,121 @@ public class Robot extends TimedRobot {
                     m_robotContainer.drivetrain.getState().Pose.getRotation().getDegrees());
         }
 
+        boolean currentState = SmartDashboard.getBoolean("SeedGyro", false);
+
+        // Detect rising edge (button just pressed)
+        if (currentState && !lastSeedState) {
+            seedGyroButton();
+            SmartDashboard.putBoolean("SeedGyro", false);
+        }
+
+        lastSeedState = currentState;
+
     }
 
-    public void seedGyro() {
-        // Log to console when seeding is attempted
-        System.out.println("seedGyro called");
-        
-        if(gyroSeeded)
+    // boolean hack = false;
+    public void seedGyroButton() {
+
+        boolean hack = false;
+        if (gyroSeeded)
+            hack = true;
+        gyroSeeded = false;
+        seedGyro(false);
+    }
+
+    public void seedGyro(boolean onlyFront) {
+        // Publish telemetry when seeding is attempted
+        SmartDashboard.putString("SeedGyro/LastAction", "seedGyro called");
+        SmartDashboard.putNumber("SeedGyro/LastAttemptTime", Timer.getFPGATimestamp());
+
+        if (gyroSeeded)
             return;
-        
+
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 0);
         LimelightHelpers.SetIMUMode("limelight", 4);
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
 
+        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
+        LimelightHelpers.SetIMUMode("limelight-rear", 4);
+
+        /*
+         * try {
+         * Thread.sleep(500);
+         * } catch (InterruptedException e) {
+         * Thread.currentThread().interrupt();
+         * }
+         */
+
+        var mt1rear = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear");
         var mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-        if (mt1 != null) {
-            System.out.println("seedGyro: limelight measurement present, tagCount=" + mt1.tagCount);
-            if (mt1.tagCount >= 1) {
 
-                gyroSeeded = true;
-                Pose2d seedPose = mt1.pose;
-                System.out.println("seedGyro: seeding yaw=" + mt1.pose.getRotation().getDegrees()
-                        + " deg, timestamp=" + mt1.timestampSeconds);
-                m_robotContainer.drivetrain.getPigeon2().setYaw(mt1.pose.getRotation().getDegrees());
-                m_robotContainer.drivetrain.resetPose(seedPose);
-                m_robotContainer.drivetrain.seedFieldCentric(mt1.pose.getRotation());
-            } else {
-                //Todo test this code. 
-                System.out.println("seedGyro: insufficient tags (" + mt1.tagCount + "), not seeding.");
-                if( DriverStation.getAlliance().get() == DriverStation.Alliance.Red)
-                 m_robotContainer.drivetrain.seedFieldCentric(new Rotation2d(Math.toRadians(mt1.pose.getRotation().getDegrees()-180)));
-                
-                }
+        if (mt1rear != null && mt1rear.tagCount >= 1) {
+            SmartDashboard.putString("SeedGyro/LastAction", "MT1 rear multi-tag pose");
+            SmartDashboard.putNumber("SeedGyro/LastTagCount", mt1rear.tagCount);
+            seedFromPose(mt1rear.pose);
+        } else if (mt1 != null && mt1.tagCount >= 1) {
+            SmartDashboard.putString("SeedGyro/LastAction", "MT1 front multi-tag pose");
+            SmartDashboard.putNumber("SeedGyro/LastTagCount", mt1.tagCount);
+            seedFromPose(mt1.pose);
         } else {
-            System.out.println("seedGyro: no limelight pose available");
+            SmartDashboard.putString("SeedGyro/LastAction", "no valid multi-tag MT1 pose available");
+            SmartDashboard.putNumber("SeedGyro/LastTagCount",
+                    (mt1rear != null ? mt1rear.tagCount : 0) + (mt1 != null ? mt1.tagCount : 0));
         }
+
+        /*
+         * else {
+         * // Todo test this code.
+         * System.out.println("seedGyro: insufficient tags (" + mt1.tagCount +
+         * "), not seeding.");
+         * if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red)
+         * m_robotContainer.drivetrain.seedFieldCentric(
+         * new Rotation2d(Math.toRadians(mt1.pose.getRotation().getDegrees() - 180)));
+         * 
+         * }
+         */
+    }
+
+    private void seedFromPose(Pose2d pose) {
+        gyroSeeded = true;
+        SmartDashboard.putString("SeedGyro/LastAction", "seedFromPose");
+        SmartDashboard.putNumber("SeedGyro/LastSeedYawDeg", pose.getRotation().getDegrees());
+        double yaw;
+        yaw = pose.getRotation().getDegrees();
+        // if(hack)
+        // yaw+=180;
+
+        m_robotContainer.drivetrain.getPigeon2().setYaw(yaw);
+        m_robotContainer.drivetrain.resetPose(pose);
+        m_robotContainer.drivetrain.seedFieldCentric(pose.getRotation());
     }
 
     @Override
     public void disabledInit() {
+        opModeStarted = false;
         // DogLog.log("RoboRIO ID", RobotController.getSerialNumber());
-        seedGyro();
+        seedGyro(false);
         LimelightHelpers.SetIMUMode("limelight", 1); // Seed internal IMU
         LimelightHelpers.setLimelightNTDouble("limelight", "throttle_set", 200);
 
         LimelightHelpers.SetIMUMode("limelight-rear", 1); // Seed internal IMU
-        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 200);
+        LimelightHelpers.setLimelightNTDouble("limelight-rear", "throttle_set", 0);
 
         m_robotContainer.showTeamColors();
 
     }
 
+    private double lastSeedAttempt = 0;
+
     @Override
     public void disabledPeriodic() {
+        /*
+         * double now = Timer.getFPGATimestamp();
+         * 
+         * if (!gyroSeeded && now - lastSeedAttempt > 1.0) {
+         * seedGyro();
+         * lastSeedAttempt = now;
+         * }
+         */
     }
 
     @Override
@@ -230,6 +341,7 @@ public class Robot extends TimedRobot {
     @Override
     public void autonomousInit() {
 
+        opModeStarted = true;
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
         if (m_autonomousCommand != null) {
@@ -259,6 +371,7 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
 
+        opModeStarted = true;
         // m_robotContainer.getLEDSystem().startCountdown(30);
         m_robotContainer.startTeleopTimer();
 

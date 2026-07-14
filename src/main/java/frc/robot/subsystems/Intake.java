@@ -88,8 +88,9 @@ public class Intake extends SubsystemBase {
         rollerLimits.SupplyCurrentLimit = IntakeConstants.kRollerCurrentLimit;
         m_RollerMotor.getConfigurator().apply(rollerLimits);
 
-        TalonFXConfiguration RollerConfigs = new TalonFXConfiguration();
-        RollerConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+    TalonFXConfiguration RollerConfigs = new TalonFXConfiguration();
+    // Use brake mode so the roller resists motion when neutral/stopped
+    RollerConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         RollerConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         
         Slot0Configs RollerGains = RollerConfigs.Slot0;

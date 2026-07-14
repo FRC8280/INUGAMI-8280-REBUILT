@@ -5,27 +5,27 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "wait",
           "data": {
-            "pathName": "Right First Score v3"
+            "waitTime": 0.5
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "Shoot"
+            "pathName": "Kiss Auto Path Start1481"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 2.5
+            "waitTime": 3.5
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "Stop Shooter"
+            "pathName": "Kiss Auto Path End1481"
           }
         }
       ]

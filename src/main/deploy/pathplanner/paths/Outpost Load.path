@@ -3,47 +3,35 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.868034090909092,
-        "y": 2.1488522727272734
+        "x": 3.582922222222222,
+        "y": 0.6049555555555548
       },
       "prevControl": null,
       "nextControl": {
-        "x": 8.814394498333213,
-        "y": 2.1525246990735596
+        "x": 4.582922222222219,
+        "y": 0.6049555555555548
       },
       "isLocked": false,
-      "linkedName": "Right Pass auton part 1"
+      "linkedName": null
     },
     {
       "anchor": {
-        "x": 3.5494772727272723,
-        "y": 2.1488522727272734
+        "x": 0.9226888888888891,
+        "y": 0.6341888888888878
       },
       "prevControl": {
-        "x": 3.2248937552296293,
-        "y": 2.1624845141105142
+        "x": -0.07731111111111089,
+        "y": 0.6341888888888878
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Right Pass auton (endpoint for part 2)"
+      "linkedName": "Outpost Intake"
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [
-    {
-      "name": "Shoot",
-      "waypointRelativePos": 1.0,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "named",
-        "data": {
-          "name": "Shoot"
-        }
-      }
-    }
-  ],
+  "eventMarkers": [],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -54,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 61.64503821467591
+    "rotation": 179.28384005452952
   },
   "reversed": false,
-  "folder": "Old",
+  "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 89.30972280213486
+    "rotation": 180.0
   },
   "useDefaultConstraints": true
 }

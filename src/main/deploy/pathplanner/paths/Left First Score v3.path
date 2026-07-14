@@ -16,16 +16,16 @@
     },
     {
       "anchor": {
-        "x": 7.821755555555557,
-        "y": 4.619666666666666
+        "x": 8.065366666666668,
+        "y": 4.600177777777777
       },
       "prevControl": {
-        "x": 7.724311111111113,
-        "y": 7.075266666666666
+        "x": 8.11408888888889,
+        "y": 7.747633333333333
       },
       "nextControl": {
-        "x": 7.831668388657623,
-        "y": 4.36986327249459
+        "x": 8.061497161216801,
+        "y": 4.350207725716388
       },
       "isLocked": false,
       "linkedName": null
@@ -36,8 +36,8 @@
         "y": 6.324944444444444
       },
       "prevControl": {
-        "x": 4.293989393939396,
-        "y": 5.5805737373737365
+        "x": 4.109122222222222,
+        "y": 5.369988888888888
       },
       "nextControl": null,
       "isLocked": false,
@@ -65,7 +65,7 @@
   "constraintZones": [
     {
       "name": "Constraints Zone",
-      "minWaypointRelativePos": 0.6292803970223185,
+      "minWaypointRelativePos": 0.5617825793382868,
       "maxWaypointRelativePos": 1.069975186104209,
       "constraints": {
         "maxVelocity": 2.0,
@@ -78,10 +78,55 @@
     }
   ],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Deploy Intake",
+      "waypointRelativePos": 0.11315136476427234,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Deploy Intake"
+        }
+      }
+    },
+    {
+      "name": "Start Intake",
+      "waypointRelativePos": 0.14888337468984003,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Start Intake"
+        }
+      }
+    },
+    {
+      "name": "Stop Intake",
+      "waypointRelativePos": 1.2208436724565652,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Stop Intake"
+        }
+      }
+    },
+    {
+      "name": "Warmup Shooter",
+      "waypointRelativePos": 1.4709677419354794,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Warmup Shooter"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
-    "maxVelocity": 3.0,
-    "maxAcceleration": 3.0,
+    "maxVelocity": 4.0,
+    "maxAcceleration": 4.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
@@ -97,5 +142,5 @@
     "velocity": 0,
     "rotation": -90.49600473776822
   },
-  "useDefaultConstraints": true
+  "useDefaultConstraints": false
 }

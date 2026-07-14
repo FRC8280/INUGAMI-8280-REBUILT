@@ -7,7 +7,31 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Right First Score v3"
+            "pathName": "Left First Score v3"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 2.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Stop Shooter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Left Second Score v3-Alt"
           }
         },
         {

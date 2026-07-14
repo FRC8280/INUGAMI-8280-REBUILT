@@ -8,56 +8,72 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.714625,
-        "y": 8.16803409090909
+        "x": 3.0859555555555556,
+        "y": 8.049711111111112
       },
       "isLocked": false,
       "linkedName": "Left First Score v3"
     },
     {
       "anchor": {
-        "x": 7.373306818181818,
-        "y": 7.302261363636363
+        "x": 6.048266666666667,
+        "y": 6.802422222222222
       },
       "prevControl": {
-        "x": 7.012568181818182,
-        "y": 7.415636363636363
+        "x": 5.836544775319844,
+        "y": 7.5963793147728005
       },
       "nextControl": {
-        "x": 7.611805247407132,
-        "y": 7.227304714451265
+        "x": 6.243155555555557,
+        "y": 6.07158888888889
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.6309772727272716,
-        "y": 4.911079545454545
+        "x": 6.048266666666667,
+        "y": 4.590433333333333
       },
       "prevControl": {
-        "x": 7.826806818181817,
-        "y": 5.3130454545454535
+        "x": 6.0385222222222215,
+        "y": 4.989955555555555
       },
       "nextControl": {
-        "x": 7.435147727272726,
-        "y": 4.509113636363636
+        "x": 6.058011111111112,
+        "y": 4.190911111111112
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 6.399066666666666,
-        "y": 4.502733333333333
+        "x": 7.860733333333334,
+        "y": 4.3858
       },
       "prevControl": {
-        "x": 6.553412086670798,
-        "y": 4.306067394940971
+        "x": 7.8773630859642765,
+        "y": 4.136353710535848
       },
       "nextControl": {
-        "x": 5.1907555555555565,
-        "y": 6.042355555555555
+        "x": 7.8441035807023916,
+        "y": 4.635246289464152
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.860733333333334,
+        "y": 5.837722222222221
+      },
+      "prevControl": {
+        "x": 7.864129176797105,
+        "y": 6.087699157652612
+      },
+      "nextControl": {
+        "x": 7.857337489869563,
+        "y": 5.587745286791831
       },
       "isLocked": false,
       "linkedName": null
@@ -68,8 +84,8 @@
         "y": 6.324944444444444
       },
       "prevControl": {
-        "x": 2.803366666666666,
-        "y": 5.866955555555555
+        "x": 2.8813222222222223,
+        "y": 5.418711111111111
       },
       "nextControl": null,
       "isLocked": false,
@@ -78,31 +94,27 @@
   ],
   "rotationTargets": [
     {
-      "waypointRelativePos": 0.44339622641509435,
+      "waypointRelativePos": 0.33941908713692354,
       "rotationDegrees": 0.0
     },
     {
-      "waypointRelativePos": 1.0094339622641508,
-      "rotationDegrees": -88.7738977357951
+      "waypointRelativePos": 1.9941908713692924,
+      "rotationDegrees": -91.1345963160798
     },
     {
-      "waypointRelativePos": 1.6839622641509455,
-      "rotationDegrees": -87.85340671413194
+      "waypointRelativePos": 2.800829875518663,
+      "rotationDegrees": 33.621836459754455
     },
     {
-      "waypointRelativePos": 2.9433962264151075,
-      "rotationDegrees": 179.50830102668252
-    },
-    {
-      "waypointRelativePos": 3.6855345911949673,
-      "rotationDegrees": 178.6063131408701
+      "waypointRelativePos": 3.921161825726096,
+      "rotationDegrees": 89.00148398450725
     }
   ],
   "constraintZones": [
     {
       "name": "Constraints Zone",
-      "minWaypointRelativePos": 1.2640108035111428,
-      "maxWaypointRelativePos": 3.01339950372202,
+      "minWaypointRelativePos": 1.2456575682382185,
+      "maxWaypointRelativePos": 4.153846153846159,
       "constraints": {
         "maxVelocity": 2.5,
         "maxAcceleration": 2.5,
@@ -117,7 +129,7 @@
   "eventMarkers": [
     {
       "name": "Start Intake",
-      "waypointRelativePos": 0.44863523573202857,
+      "waypointRelativePos": 0.7791563275434022,
       "endWaypointRelativePos": null,
       "command": {
         "type": "named",
@@ -128,7 +140,7 @@
     },
     {
       "name": "Warmup Shooter",
-      "waypointRelativePos": 3.211910669975178,
+      "waypointRelativePos": 4.481389578163782,
       "endWaypointRelativePos": null,
       "command": {
         "type": "named",
@@ -139,7 +151,7 @@
     },
     {
       "name": "Stop Intake",
-      "waypointRelativePos": 3.331017369727032,
+      "waypointRelativePos": 4.540942928039648,
       "endWaypointRelativePos": null,
       "command": {
         "type": "named",

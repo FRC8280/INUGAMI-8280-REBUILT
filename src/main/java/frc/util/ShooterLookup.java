@@ -28,8 +28,10 @@ public class ShooterLookup {
     addPoint(10.0, 5600, 45); */ 
 
     //New shooter values for 4/14
-    addPoint(1.5, 2400, 53); 
-    addPoint(4.0, 3750, 48); 
+    addPoint(1.5, 2500, 70);
+    addPoint(2.2, 2500, 60);
+    addPoint(3.3, 3000, 60);
+    addPoint(5.2, 3500, 45);
   }
 
   /** Adds one calibration point to the table. */

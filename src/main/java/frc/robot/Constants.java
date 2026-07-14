@@ -41,8 +41,8 @@ public class Constants {
         public static final int kPivotCurrentLimit = 30;
         public static final int kPivotStatorCurrentLimit = 60;
         public static final double kPivotStowed = 0;
-        public static final double kPivotDeployed = -21.6875;
-        public static final double kPivotAgitate = -7.886;
+        public static final double kPivotDeployed = -21.316;//-21.6875;
+        public static final double kPivotAgitate = -15.650;//-7.886;
 
         public static final int kRollerIntakeMotorId = 12;
         public static final int kSpeed = -4000;
@@ -55,7 +55,7 @@ public class Constants {
     public static final class IndexerConstants{
         public static final int kIndexerMotorId = 11;
         public static final int kIndexerCurrentLimit = 40;
-        public static final int kSpeed = 4500;
+        public static final int kSpeed = 4500; //5000;
 
         public static final double kS = 0.25;
         public static final double kV = 0.12;
@@ -72,9 +72,9 @@ public class Constants {
         public static final double kP = 0.3;//0.12761;
         public static final double kI = 0;
         public static final double kD = 0;
-        public static final double kS = 0.065323;
-        public static final double kV = 0.11877;
-        public static final double kA = 0.021233;
+        public static final double kS = 0.095501;
+        public static final double kV = 0.1156;
+        public static final double kA = 0.011068;
 
         //Accelerator PID values (if using)
         public static final double kAccelP = 0.3;//0.014922;
@@ -100,7 +100,7 @@ public class Constants {
         public static final int kServoHubId = 10;
 
         public static final double kShooterTargetVelocity = 240; // RPM
-        public static final double kDefaultShotAngleDeg = 60.0; // Default shot angle in degrees
+        
     public static final double kHoodMinDeg = 25.0; // Minimum hood angle in degrees
     public static final double kHoodMaxDeg = 70.0; // Maximum hood angle in degrees
 
@@ -120,8 +120,8 @@ public class Constants {
         public static Translation2d BlueHub = new Translation2d(4.85, 4.0);
         public static Translation2d RedHub = new Translation2d(11.89, 4.035);
 
-        public static double kPassRPM = 3000;
-        public static int kPassHoodDeg = 45;
+        public static double kPassRPM = 250; //3000;
+    public static int kPassHoodDeg = 45; //35;
     }
 
     public static final class HoodConstants {
@@ -148,7 +148,7 @@ public class Constants {
 
         // Position PID gains for hood (slot 0)
         public static final double kHoodKG = 0.0; // feedforward
-        public static final double kHoodKP = 1.5; // proportional
+        public static final double kHoodKP = 2.25; // proportional
         public static final double kHoodKI = 0.01; // integral
         public static final double kHoodKD = 0.05; // derivative
     }

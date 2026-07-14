@@ -21,6 +21,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -39,6 +40,7 @@ import edu.wpi.first.wpilibj.Timer;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
+import frc.robot.commands.Swerve.DriveToTargetDropIn;
 //import dev.doglog.DogLog;
 //import dev.doglog.DogLogOptions;
 //import frc.robot.commands.RotateToPointCommand;
@@ -96,7 +98,7 @@ public class RobotContainer {
     private static final double kIntakeDeployDuration = 0.25;
     private boolean m_intakeCycleRunning = false;
 
-    private double driveScaler = 0.85;
+    private double driveScaler = 0.8;
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top
                                                                                         // speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second
@@ -182,6 +184,41 @@ public class RobotContainer {
          * powerDistributionSystem.getTotalCurrent());
          */
         // countdownLED.periodic();
+        // Lightly vibrate primary controller when the hood motor is at or near
+        // the retracted position. Use the motor-reported position (rotations)
+        // and trigger when within 95% of the retracted motor setpoint or a
+        // small absolute tolerance when the setpoint is zero.
+        /*
+         * try {
+         * double targetMotorPos = Constants.HoodConstants.kHoodSetpointA; // retracted
+         * motor rotations
+         * double motorPos = m_Shooter.m_Hood.getMotorPositionRotations();
+         * 
+         * boolean nearRetracted;
+         * if (Math.abs(targetMotorPos) > 1e-6) {
+         * // If target non-zero, use relative 95% threshold and 5% closeness
+         * nearRetracted = Math.abs(motorPos - targetMotorPos) <=
+         * Math.abs(targetMotorPos) * 0.05
+         * || motorPos >= 0.95 * targetMotorPos;
+         * } else {
+         * // If target is zero (common for a home position), use a small
+         * // absolute tolerance (0.05 rotations) to avoid relying on exact equality.
+         * nearRetracted = Math.abs(motorPos - targetMotorPos) <= 0.05;
+         * }
+         * 
+         * if (nearRetracted) {
+         * // light rumble (~30%) on both sides
+         * driver.getHID().setRumble(RumbleType.kLeftRumble, 0.3);
+         * driver.getHID().setRumble(RumbleType.kRightRumble, 0.3);
+         * } else {
+         * // ensure rumble is off otherwise
+         * driver.getHID().setRumble(RumbleType.kLeftRumble, 0.0);
+         * driver.getHID().setRumble(RumbleType.kRightRumble, 0.0);
+         * }
+         * } catch (Exception e) {
+         * // If anything goes wrong (subsystems not initialized yet), don't crash.
+         * }
+         */
     }
 
     public void SetShootingSTate(ShootingState state) {
@@ -207,6 +244,9 @@ public class RobotContainer {
         double elapsed = m_warmupTimer.get();
         if (elapsed >= Constants.kWarmupSeconds) // Timeout of it's taking too long
             return true;
+
+        if (passingZone != PassingZone.NOT_PASSING)
+            return m_Shooter.IsReadyToFire();
 
         // return m_Shooter.IsReadyToFire();
         return m_Shooter.IsReadyToFire() && (autoAimCommand == null || !autoAimCommand.isScheduled());
@@ -251,7 +291,8 @@ public class RobotContainer {
     }
 
     public void CeaseFire() {
-
+        
+        m_Shooter.stopOverride();
         if (passingZone != PassingZone.NOT_PASSING)
             return;
 
@@ -343,12 +384,12 @@ public class RobotContainer {
         var pose = drivetrain.getState().Pose;
         double dx = lastTarget.getX() - pose.getX();
         double dy = lastTarget.getY() - pose.getY();
-    // Compute raw angles (radians)
-    // desiredRaw is the angle pointing toward the target. To have the
-    // back of the robot face the target, flip by 180 degrees (PI
-    // radians) so the desired heading points away from the target.
-    double desiredRaw = Math.atan2(dy, dx) + Math.PI;
-    
+        // Compute raw angles (radians)
+        // desiredRaw is the angle pointing toward the target. To have the
+        // back of the robot face the target, flip by 180 degrees (PI
+        // radians) so the desired heading points away from the target.
+        double desiredRaw = Math.atan2(dy, dx) + Math.PI;
+
         double currentRaw = pose.getRotation().getRadians();
 
         // Normalize both angles to [0, 2PI) to avoid wraparound issues
@@ -358,6 +399,7 @@ public class RobotContainer {
         // Compute shortest signed angle error in radians (in range [-PI, PI])
         m_angleError = Math.atan2(Math.sin(m_desiredAngle - m_currentAngle),
                 Math.cos(m_desiredAngle - m_currentAngle));
+
         // Choose threshold depending on alliance (30° normally, 145° when on Red)
         // In these cases we want to aim a little closer.
         double thresholdDeg = (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) ? 140.0 : 30.0;
@@ -507,17 +549,27 @@ public class RobotContainer {
                 .applyRequest(() -> point.withModuleDirection(new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))));
 
         // Reset the field-centric heading on left bumper press.
-        driver.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        driver.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+
+        driver.rightTrigger().whileTrue(new DriveToTargetDropIn(drivetrain, () -> drivetrain.getPose2d(),
+                () -> DriverStation.getAlliance().get(), "RightTrench"));
+        driver.leftTrigger().whileTrue(new DriveToTargetDropIn(drivetrain, () -> drivetrain.getPose2d(),
+                () -> DriverStation.getAlliance().get(), "LeftTrench"));
+        driver.rightBumper().whileTrue(new DriveToTargetDropIn(drivetrain, () -> drivetrain.getPose2d(),
+                () -> DriverStation.getAlliance().get(), "RightBump"));
+        driver.leftBumper().whileTrue(new DriveToTargetDropIn(drivetrain, () -> drivetrain.getPose2d(),
+                () -> DriverStation.getAlliance().get(), "LeftBump"));
 
         // emergency servo reset
         // driver.povUp().onTrue(new InstantCommand(() -> m_Shooter.SetHood(15)));
-        driver.povDown().onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
+        // driver.povDown().onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
 
         // Firing logic
-        driver.rightTrigger().whileTrue(new InstantCommand(() -> StartFiringSequence())
-                // .alongWith(ExecuteAimCommand(m_Shooter.GetAllianceHub())));
-                .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
-        driver.rightTrigger().onFalse(new InstantCommand(() -> CeaseFire()));
+
+        /*
+         * new Trigger (() -> m_Shooter.IsIdle())
+         * .onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
+         */
 
         new Trigger(() -> ReadyToFire())
                 .onTrue(new InstantCommand(() -> {
@@ -530,12 +582,15 @@ public class RobotContainer {
                 })); // activate the indexer once the shooter is warmed up and ready to fire.
 
         // intake logic
-        driver.x().onTrue(new InstantCommand(() -> toggleIntake()));
-        driver.a().whileTrue((new InstantCommand(() -> m_Intake.startIntake())));
-        driver.a().onFalse((new InstantCommand(() -> m_Intake.stopIntake())));
+        /*
+         * driver.x().onTrue(new InstantCommand(() -> toggleIntake()));
+         * driver.a().whileTrue((new InstantCommand(() -> m_Intake.startIntake())));
+         * driver.a().onFalse((new InstantCommand(() -> m_Intake.stopIntake())));
+         */
 
         // Aiming logic
-        driver.y().onTrue(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub())));
+        // driver.y().onTrue(new InstantCommand(() ->
+        // ActivateAutoAim(m_Shooter.GetAllianceHub())));
 
         // Phase transitions
         // Todo: implement warm up sequence on shooter based on phase
@@ -573,7 +628,10 @@ public class RobotContainer {
                 Constants.StandardOperatorControls.ShootFuel);
         shootFuelButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
-        shootFuelButton.onFalse(new InstantCommand(() -> CeaseFire()));
+        shootFuelButton.onFalse(new InstantCommand(() -> {
+            CeaseFire();
+            // m_Shooter.SetHood(Constants.ShooterConstants.kShooterDefaultAngle);
+        }));
 
         // While the shooter is firing, periodically bring the intake up to feed,
         // then stow it after a short deploy duration. Stops when shooter stops firing.
@@ -617,6 +675,10 @@ public class RobotContainer {
                     m_intakeDeployTimer.stop();
                 }));
 
+        new Trigger(() -> m_Shooter.hoodIsUp())
+                .onTrue(new InstantCommand(() -> driver.getHID().setRumble(RumbleType.kBothRumble, 1)))
+                .onFalse(new InstantCommand(() -> driver.getHID().setRumble(RumbleType.kBothRumble, 0)));
+
         JoystickButton abortButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.OperatorAbort);
         abortButton.onTrue(new InstantCommand(() -> CeaseFire())
@@ -639,23 +701,40 @@ public class RobotContainer {
 
         // Passing Controls
         JoystickButton passZone4 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Left);
-        passZone4.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Left))
-                .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseLeftButton()))));
-        passZone4.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Left)));
+        passZone4.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Left)));
+        // .alongWith(new InstantCommand(() ->
+        // ActivateAutoAim(m_Shooter.getPassingPoseLeftButton()))));
+        passZone4.onFalse(new InstantCommand(() -> {
+            CeasePassing(PassingZone.Zone_Left);
+            m_Shooter.SetHood(Constants.ShooterConstants.kShooterDefaultAngle);
+        }));
 
         JoystickButton passZone5 = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.Right);
-        passZone5.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Right))
-                .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.getPassingPoseRightButton()))));
-        passZone5.onFalse(new InstantCommand(() -> CeasePassing(PassingZone.Zone_Right)));
+        passZone5.whileTrue(new InstantCommand(() -> StartPassingSequence(PassingZone.Zone_Right)));
+        // .alongWith(new InstantCommand(() ->
+        // ActivateAutoAim(m_Shooter.getPassingPoseRightButton()))));
+        passZone5.onFalse(new InstantCommand(() -> {
+            CeasePassing(PassingZone.Zone_Right);
+            m_Shooter.SetHood(Constants.ShooterConstants.kShooterDefaultAngle);
+        }));
 
-        /*JoystickButton hoodLow = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.HoodLow);
-        hoodLow.onTrue(new InstantCommand(() -> m_Shooter.SetHood(60)));
+        JoystickButton hoodLow = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.HoodLow);
+        hoodLow.whileTrue(new InstantCommand(() -> StartFiringSequence())
+                .alongWith(new InstantCommand(() -> m_Shooter.startOverride()))
+                .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
+        hoodLow.onFalse(new InstantCommand(() -> {
+            CeaseFire();
+        }));
 
-        JoystickButton hoodMid = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.HoodMid);
-        hoodMid.onTrue(new InstantCommand(() -> m_Shooter.SetHood(45)));
-
-        JoystickButton hoodHigh = new JoystickButton(operatorStandard, Constants.StandardOperatorControls.HoodHigh);
-        hoodHigh.onTrue(new InstantCommand(() -> m_Shooter.SetHood(30)));*/
+        /*
+         * JoystickButton hoodMid = new JoystickButton(operatorStandard,
+         * Constants.StandardOperatorControls.HoodMid);
+         * hoodMid.onTrue(new InstantCommand(() -> m_Shooter.SetHood(45)));
+         * 
+         * JoystickButton hoodHigh = new JoystickButton(operatorStandard,
+         * Constants.StandardOperatorControls.HoodHigh);
+         * hoodHigh.onTrue(new InstantCommand(() -> m_Shooter.SetHood(30)));
+         */
 
         JoystickButton warmUpButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.WarmupShooter);
@@ -675,7 +754,7 @@ public class RobotContainer {
         driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        drivetrain.registerTelemetry(logger::telemeterize);
+        // drivetrain.registerTelemetry(logger::telemeterize);
     }
 
     public void showTeamColors() {

@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Right First Score v3"
+            "pathName": "Depot Auto v2"
           }
         },
         {
@@ -19,7 +19,7 @@
         {
           "type": "wait",
           "data": {
-            "waitTime": 2.5
+            "waitTime": 3.0
           }
         },
         {

@@ -1,6 +1,18 @@
 # Compiled class file
 *.class
 
+# Robot logs
+logs/
+*.wpilog
+*.hoot
+
+.gradle/
+build/
+logs/
+ctre_sim/
+.SysId/
+simgui*.json
+
 # Log file
 *.log
 
