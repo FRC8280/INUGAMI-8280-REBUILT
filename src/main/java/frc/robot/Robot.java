@@ -30,7 +30,10 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         m_robotContainer = new RobotContainer();
-        m_visionManager = new VisionManager(m_robotContainer.drivetrain, USE_LIMELIGHT);
+        m_visionManager =
+                new VisionManager(
+                        m_robotContainer.drivetrain,
+                        USE_LIMELIGHT);
         SmartDashboard.putData("Field", m_field);
     }
 
@@ -43,7 +46,9 @@ public class Robot extends TimedRobot {
     @Override
     public void robotPeriodic() {
         double now = Timer.getFPGATimestamp();
-        SmartDashboard.putNumber("Robot/LoopTime", now - lastLoopTime);
+        SmartDashboard.putNumber(
+                "Robot/LoopTime",
+                now - lastLoopTime);
         lastLoopTime = now;
 
         m_timeAndJoystickReplay.update();
@@ -56,15 +61,24 @@ public class Robot extends TimedRobot {
         m_field.setRobotPose(pose);
 
         if (Constants.kVerboseDashboard) {
-            SmartDashboard.putNumber("Current Drive X", pose.getX());
-            SmartDashboard.putNumber("Current Drive Y", pose.getY());
-            SmartDashboard.putNumber("Current Yaw", pose.getRotation().getDegrees());
-            SmartDashboard.putBoolean("Vision/GyroSeeded", m_visionManager.isGyroSeeded());
+            SmartDashboard.putNumber(
+                    "Current Drive X",
+                    pose.getX());
+            SmartDashboard.putNumber(
+                    "Current Drive Y",
+                    pose.getY());
+            SmartDashboard.putNumber(
+                    "Current Yaw",
+                    pose.getRotation().getDegrees());
+            SmartDashboard.putBoolean(
+                    "Vision/GyroSeeded",
+                    m_visionManager.isGyroSeeded());
         }
     }
 
     private void handleSeedButton() {
-        boolean currentState = SmartDashboard.getBoolean("SeedGyro", false);
+        boolean currentState =
+                SmartDashboard.getBoolean("SeedGyro", false);
 
         if (currentState && !lastSeedButtonState) {
             m_visionManager.requestManualReseed();
@@ -93,9 +107,12 @@ public class Robot extends TimedRobot {
     public void autonomousInit() {
         m_visionManager.onEnabledInit();
 
-        m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+        m_autonomousCommand =
+                m_robotContainer.getAutonomousCommand();
+
         if (m_autonomousCommand != null) {
-            CommandScheduler.getInstance().schedule(m_autonomousCommand);
+            CommandScheduler.getInstance()
+                    .schedule(m_autonomousCommand);
         }
     }
 
@@ -110,7 +127,8 @@ public class Robot extends TimedRobot {
     @Override
     public void teleopInit() {
         if (m_autonomousCommand != null) {
-            CommandScheduler.getInstance().cancel(m_autonomousCommand);
+            CommandScheduler.getInstance()
+                    .cancel(m_autonomousCommand);
         }
 
         m_visionManager.onEnabledInit();

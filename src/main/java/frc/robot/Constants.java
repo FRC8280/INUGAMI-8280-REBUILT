@@ -13,8 +13,8 @@ public class Constants {
     }
 
     public static final class LEDConstants {
-        public static final int kFrontCandleID = 50; // CAN bus ID for the CANdle
-        public static final int kTimerCandleID = 51; // CAN bus ID for the timer candle (if used)
+        public static final int kRearCandleID = 50; // CAN bus ID for the CANdle
+        public static final int kFrontCandleID = 51; // CAN bus ID for the timer candle (if used)
 
     }
 

@@ -23,8 +23,8 @@ public class LEDSubsystem extends SubsystemBase {
     private LightStatus m_LightStatus = LightStatus.RED;
 
     private final CANBus kCANBus = new CANBus("rio");
+    private final CANdle m_RearCandle = new CANdle(LEDConstants.kRearCandleID, kCANBus);
     private final CANdle m_FrontCandle = new CANdle(LEDConstants.kFrontCandleID, kCANBus);
-    private final CANdle m_TimerCandle = new CANdle(LEDConstants.kTimerCandleID, kCANBus);
     private final Timer timer = new Timer();
 
     // Colors and animation
@@ -65,8 +65,8 @@ public class LEDSubsystem extends SubsystemBase {
     }
 
     public LEDSubsystem() {
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kWhite));
         m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kWhite));
-        m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kWhite));
         m_LightStatus = LightStatus.WHITE;
 
         clearTimerStrip();
@@ -204,7 +204,7 @@ public class LEDSubsystem extends SubsystemBase {
             return;
         }
 
-        StatusCode status = m_TimerCandle.setControl(
+        StatusCode status = m_FrontCandle.setControl(
                 solidRequest
                         .withLEDStartIndex(startInclusive)
                         .withLEDEndIndex(endInclusive)
@@ -227,57 +227,57 @@ public class LEDSubsystem extends SubsystemBase {
         if (m_LightStatus == LightStatus.RED)
             return;
 
-        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kRed));
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kRed));
         m_LightStatus = LightStatus.RED;
 
         if (secondLight)
-            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kRed));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kRed));
     }
 
     public void setGreen(boolean secondLight) {
         if (m_LightStatus == LightStatus.GREEN)
             return;
 
-        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
         m_LightStatus = LightStatus.GREEN;
 
         if (secondLight)
-            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
     }
 
     public void setBlue(boolean secondLight) {
         if (m_LightStatus == LightStatus.BLUE)
             return;
 
-        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
         m_LightStatus = LightStatus.YELLOW;
 
         if (secondLight)
-            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
     }
 
     public void setYellow(boolean secondLight) {
         if (m_LightStatus == LightStatus.YELLOW)
             return;
 
-        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
         m_LightStatus = LightStatus.YELLOW;
 
         if (secondLight)
-            m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
     }
 
     public void showTeamColors() {
-        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
-        m_TimerCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+        m_RearCandle.setControl(new SolidColor(0, 32).withColor(kBlue));
+        m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
     }
     public Command updateLEDs() {
         return run(() -> {
             for (var solidColor : m_colors) {
-                m_FrontCandle.setControl(solidColor);
+                m_RearCandle.setControl(solidColor);
                 // m_RearCandle.setControl(solidColor);
             }
-            m_FrontCandle.setControl(m_slot0Animation);
+            m_RearCandle.setControl(m_slot0Animation);
             // m_RearCandle.setControl(m_slot0Animation);
         });
     }
