@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.LEDConstants;
+import frc.robot.VisionManager.VisionStatus;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.controls.ColorFlowAnimation;
@@ -39,6 +40,12 @@ public class LEDSubsystem extends SubsystemBase {
             .withDirection(AnimationDirectionValue.Forward)
             .withFrameRate(Units.Hertz.of(25));
 
+    // Vision status uses only the eight onboard LEDs (indices 0-7).
+    private final ColorFlowAnimation m_visionNotSeededAnimation = createVisionAnimation(kRed);
+    private final ColorFlowAnimation m_visionSeekingMt2Animation = createVisionAnimation(kYellow);
+    private final ColorFlowAnimation m_visionLockedAnimation = createVisionAnimation(kGreen);
+    private VisionStatus m_lastVisionStatus = null;
+
     private final SolidColor[] m_colors = new SolidColor[] {
     };
 
@@ -62,6 +69,52 @@ public class LEDSubsystem extends SubsystemBase {
         GREEN,
         YELLOW,
         RED
+    }
+
+    private ColorFlowAnimation createVisionAnimation(RGBWColor color) {
+        return new ColorFlowAnimation(kStripStartIndex, kStripLedCount)
+                .withSlot(0)
+                .withColor(color)
+                .withDirection(AnimationDirectionValue.Forward)
+                .withFrameRate(Units.Hertz.of(2));
+    }
+
+    public void setVisionStatus(VisionStatus status) {
+       
+       /*  if (running) {
+            return;
+        }*/
+
+        if (status == null || status == m_lastVisionStatus) {
+            return;
+        }
+
+/*
+        ColorFlowAnimation animation = switch (status) {
+            case NOT_SEEDED -> m_visionNotSeededAnimation;
+            case SEEKING_MT2 -> m_visionSeekingMt2Animation;
+            case LOCKED -> m_visionLockedAnimation;
+        };
+
+        m_RearCandle.setControl(animation);
+        m_FrontCandle.setControl(animation); */
+
+        if(status ==  VisionStatus.NOT_SEEDED)
+        {
+            m_RearCandle.setControl(new SolidColor(0, 32).withColor(kRed));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kRed));
+        }
+        else if (status == VisionStatus.SEEKING_MT2)
+        {
+            m_RearCandle.setControl(new SolidColor(0, 32).withColor(kYellow));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kYellow)); 
+        }
+        else if (status == VisionStatus.LOCKED)
+        {
+            m_RearCandle.setControl(new SolidColor(0, 32).withColor(kGreen));
+            m_FrontCandle.setControl(new SolidColor(0, 32).withColor(kGreen)); 
+        }
+        m_lastVisionStatus = status;
     }
 
     public LEDSubsystem() {
@@ -105,7 +158,7 @@ public class LEDSubsystem extends SubsystemBase {
         lastColorZone = null;
     }
 
-    public void periodic() {
+    /*public void periodic() {
         if (!running) {
             return;
         }
@@ -159,7 +212,7 @@ public class LEDSubsystem extends SubsystemBase {
         lastDisplayedRemaining = remaining;
         lastLitCount = newLitCount;
         lastColorZone = newZone;
-    }
+    }*/
 
     public boolean isFinished() {
         return timer.get() >= countdownDuration;

@@ -19,7 +19,7 @@ public class Constants {
     }
 
 
-    public static final boolean kVerboseDashboard = true;
+    public static final boolean kVerboseDashboard = false;
     public static final double kWarmupSeconds = 4.0;
     public static final double kMaxSpeed = 1.0;
 

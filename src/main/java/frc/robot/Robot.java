@@ -55,6 +55,8 @@ public class Robot extends TimedRobot {
         CommandScheduler.getInstance().run();
 
         m_visionManager.periodic();
+        m_robotContainer.getLEDSystem()
+                .setVisionStatus(m_visionManager.getVisionStatus());
         handleSeedButton();
 
         var pose = m_robotContainer.drivetrain.getState().Pose;

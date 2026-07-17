@@ -31,6 +31,12 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
  * </ul>
  */
 public class VisionManager {
+    public enum VisionStatus {
+        NOT_SEEDED,
+        SEEKING_MT2,
+        LOCKED
+    }
+
     private static final double MAX_MEASUREMENT_AGE_SECONDS = 0.25;
     private static final double MAX_FUTURE_TIMESTAMP_SECONDS = 0.05;
 
@@ -39,6 +45,7 @@ public class VisionManager {
     private static final double MAX_SINGLE_TAG_SEED_DISTANCE_METERS = 2.5;
     private static final double MAX_SEED_DISTANCE_METERS = 7.0;
     private static final double SEED_RETRY_SECONDS = 0.25;
+    private static final double MT2_LOCK_TIMEOUT_SECONDS = 0.5;
 
     // MT2 hard rejection rules.
     private static final double MAX_MT2_ANGULAR_SPEED_RAD_PER_SEC = 3.0;
@@ -64,6 +71,7 @@ public class VisionManager {
 
     private boolean gyroSeeded = false;
     private double lastSeedAttemptSeconds = Double.NEGATIVE_INFINITY;
+    private double lastGoodMt2PositionSeconds = Double.NEGATIVE_INFINITY;
 
     private GenericEntry seededEntry;
     private GenericEntry seedStatusEntry;
@@ -134,6 +142,7 @@ public class VisionManager {
         }
 
         gyroSeeded = false;
+        lastGoodMt2PositionSeconds = Double.NEGATIVE_INFINITY;
         if (!gyroSeeded) {
             lastSeedAttemptSeconds = Double.NEGATIVE_INFINITY;
             attemptSeed(true);
@@ -167,6 +176,19 @@ public class VisionManager {
 
     public boolean isGyroSeeded() {
         return gyroSeeded;
+    }
+
+    public VisionStatus getVisionStatus() {
+        if (!gyroSeeded) {
+            return VisionStatus.NOT_SEEDED;
+        }
+
+        double secondsSinceLastGoodMt2 =
+                Timer.getFPGATimestamp() - lastGoodMt2PositionSeconds;
+
+        return secondsSinceLastGoodMt2 <= MT2_LOCK_TIMEOUT_SECONDS
+                ? VisionStatus.LOCKED
+                : VisionStatus.SEEKING_MT2;
     }
 
     private void configureCameraForPoseEstimation(VisionCamera camera) {
@@ -287,7 +309,7 @@ public class VisionManager {
 
         gyroSeeded = true;
 
-        publishSeedDetails(candidate, yawDegrees);
+        //publishSeedDetails(candidate, yawDegrees);
         publishSeedStatus("Seeded from " + candidate.camera.displayName);
     }
 
@@ -353,6 +375,7 @@ public class VisionManager {
                         VISION_THETA_STD_DEV_RADIANS));
 
         camera.lastMt2AcceptedFpgaTime = nowSeconds;
+        lastGoodMt2PositionSeconds = nowSeconds;
         publishMt2Telemetry(camera, omegaRadPerSec);
     }
 
@@ -564,18 +587,18 @@ public class VisionManager {
 
     // Mirror MT2 telemetry for NetworkTables clients that don't use Shuffleboard layout
     String prefix = "Vision/" + camera.displayName + "/MT2/";
-    SmartDashboard.putBoolean(prefix + "Accepted", camera.lastMt2Accepted);
-    SmartDashboard.putString(prefix + "Reason", camera.lastMt2RejectionReason);
-    SmartDashboard.putNumber(prefix + "Age", camera.lastMt2AgeSeconds);
-    SmartDashboard.putNumber(prefix + "XYStdDev", camera.lastMt2StdDevMeters);
-    SmartDashboard.putNumber(prefix + "Omega", omegaRadPerSec);
-    SmartDashboard.putNumber(prefix + "Tags", estimate != null ? estimate.tagCount : 0);
-    SmartDashboard.putNumber(prefix + "Distance", estimate != null ? estimate.avgTagDist : -1.0);
-    SmartDashboard.putNumber(prefix + "LastAcceptedTime", camera.lastMt2AcceptedFpgaTime);
+    //SmartDashboard.putBoolean(prefix + "Accepted", camera.lastMt2Accepted);
+    //SmartDashboard.putString(prefix + "Reason", camera.lastMt2RejectionReason);
+    //SmartDashboard.putNumber(prefix + "Age", camera.lastMt2AgeSeconds);
+    //SmartDashboard.putNumber(prefix + "XYStdDev", camera.lastMt2StdDevMeters);
+    //SmartDashboard.putNumber(prefix + "Omega", omegaRadPerSec);
+    //SmartDashboard.putNumber(prefix + "Tags", estimate != null ? estimate.tagCount : 0);
+    //SmartDashboard.putNumber(prefix + "Distance", estimate != null ? estimate.avgTagDist : -1.0);
+    //SmartDashboard.putNumber(prefix + "LastAcceptedTime", camera.lastMt2AcceptedFpgaTime);
     SmartDashboard.putNumber(prefix + "X", estimate != null && estimate.pose != null ? estimate.pose.getX() : 0.0);
     SmartDashboard.putNumber(prefix + "Y", estimate != null && estimate.pose != null ? estimate.pose.getY() : 0.0);
-    SmartDashboard.putNumber(prefix + "TranslationError", estimate != null && estimate.pose != null ?
-        drivetrain.getState().Pose.getTranslation().getDistance(estimate.pose.getTranslation()) : -1.0);
+    //SmartDashboard.putNumber(prefix + "TranslationError", estimate != null && estimate.pose != null ?
+     //   drivetrain.getState().Pose.getTranslation().getDistance(estimate.pose.getTranslation()) : -1.0);
     }
 
     private void publishSeedDetails(
