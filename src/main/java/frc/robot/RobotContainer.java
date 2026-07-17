@@ -473,7 +473,7 @@ public class RobotContainer {
     }
 
     public void startTeleopTimer() {
-        getLEDSystem().startCountdown(10);
+        //getLEDSystem().startCountdown(10);
         teleopTimer.stop();
         teleopTimer.reset();
         teleopTimer.start();
@@ -485,7 +485,7 @@ public class RobotContainer {
     }
 
     private void onTransitionChange(int eventNumber, int timeSeconds) {
-        ledSystem.startCountdown(timeSeconds); // Start a 15-second countdown on the LEDs
+        //ledSystem.startCountdown(timeSeconds); // Start a 15-second countdown on the LEDs
 
         System.out.println("Teleop event " + eventNumber + " fired at " + timeSeconds + " seconds");
     }

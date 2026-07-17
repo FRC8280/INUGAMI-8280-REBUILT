@@ -91,7 +91,7 @@ public class Robot extends TimedRobot {
     @Override
     public void disabledInit() {
         m_visionManager.onDisabledInit();
-        m_robotContainer.showTeamColors();
+        //m_robotContainer.showTeamColors();
     }
 
     @Override

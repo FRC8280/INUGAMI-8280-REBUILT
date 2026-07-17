@@ -518,6 +518,14 @@ public class VisionManager {
                 estimate != null ? estimate.tagCount : 0);
         camera.mt1DistanceEntry.setDouble(
                 estimate != null ? estimate.avgTagDist : -1.0);
+
+    // Also publish mirror keys for non-Shuffleboard NT clients (Elastic/AdvantageScope)
+    String prefix = "Vision/" + camera.displayName + "/MT1/";
+    SmartDashboard.putBoolean(prefix + "Accepted", camera.lastMt1Accepted);
+    SmartDashboard.putString(prefix + "Reason", camera.lastMt1RejectionReason);
+    SmartDashboard.putNumber(prefix + "Age", camera.lastMt1AgeSeconds);
+    SmartDashboard.putNumber(prefix + "Tags", estimate != null ? estimate.tagCount : 0);
+    SmartDashboard.putNumber(prefix + "Distance", estimate != null ? estimate.avgTagDist : -1.0);
     }
 
     private void publishMt2Telemetry(
@@ -553,6 +561,21 @@ public class VisionManager {
 
         camera.mt2LastAcceptedTimeEntry.setDouble(
                 camera.lastMt2AcceptedFpgaTime);
+
+    // Mirror MT2 telemetry for NetworkTables clients that don't use Shuffleboard layout
+    String prefix = "Vision/" + camera.displayName + "/MT2/";
+    SmartDashboard.putBoolean(prefix + "Accepted", camera.lastMt2Accepted);
+    SmartDashboard.putString(prefix + "Reason", camera.lastMt2RejectionReason);
+    SmartDashboard.putNumber(prefix + "Age", camera.lastMt2AgeSeconds);
+    SmartDashboard.putNumber(prefix + "XYStdDev", camera.lastMt2StdDevMeters);
+    SmartDashboard.putNumber(prefix + "Omega", omegaRadPerSec);
+    SmartDashboard.putNumber(prefix + "Tags", estimate != null ? estimate.tagCount : 0);
+    SmartDashboard.putNumber(prefix + "Distance", estimate != null ? estimate.avgTagDist : -1.0);
+    SmartDashboard.putNumber(prefix + "LastAcceptedTime", camera.lastMt2AcceptedFpgaTime);
+    SmartDashboard.putNumber(prefix + "X", estimate != null && estimate.pose != null ? estimate.pose.getX() : 0.0);
+    SmartDashboard.putNumber(prefix + "Y", estimate != null && estimate.pose != null ? estimate.pose.getY() : 0.0);
+    SmartDashboard.putNumber(prefix + "TranslationError", estimate != null && estimate.pose != null ?
+        drivetrain.getState().Pose.getTranslation().getDistance(estimate.pose.getTranslation()) : -1.0);
     }
 
     private void publishSeedDetails(
