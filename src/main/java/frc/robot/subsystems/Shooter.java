@@ -85,13 +85,13 @@ public class Shooter extends SubsystemBase {
     ServoHubConfig config;
     public final HoodSystem m_Hood;
     private final NeutralOut neutralOut = new NeutralOut();
-    private final Supplier<LEDSubsystem> m_ledSupplier;
+    //private final Supplier<LEDSubsystem> m_ledSupplier;
     private double lastLoopTime = Timer.getFPGATimestamp();
 
     public Shooter(Supplier<Pose2d> robotPoseSupplier, Supplier<LEDSubsystem> ledSupplier) {
 
         m_robotPoseSupplier = robotPoseSupplier;
-        m_ledSupplier = ledSupplier;
+       // m_ledSupplier = ledSupplier;
 
         m_Hood = new HoodSystem();
         m_ShooterLookup = new ShooterLookup();

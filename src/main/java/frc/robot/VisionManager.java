@@ -41,7 +41,7 @@ public class VisionManager {
     private static final double MAX_FUTURE_TIMESTAMP_SECONDS = 0.05;
 
     // MT1 seed rules.
-    private static final int MIN_MULTI_TAG_SEED_COUNT = 2;
+    //private static final int MIN_MULTI_TAG_SEED_COUNT = 2;
     private static final double MAX_SINGLE_TAG_SEED_DISTANCE_METERS = 2.5;
     private static final double MAX_SEED_DISTANCE_METERS = 7.0;
     private static final double SEED_RETRY_SECONDS = 0.25;
@@ -75,13 +75,14 @@ public class VisionManager {
 
     private GenericEntry seededEntry;
     private GenericEntry seedStatusEntry;
-    private GenericEntry seedCameraEntry;
+   
+   /* private GenericEntry seedCameraEntry;
     private GenericEntry seedTagCountEntry;
     private GenericEntry seedDistanceEntry;
     private GenericEntry seedAgeEntry;
     private GenericEntry seedXEntry;
     private GenericEntry seedYEntry;
-    private GenericEntry seedYawEntry;
+    private GenericEntry seedYawEntry; */
 
     public VisionManager(CommandSwerveDrivetrain drivetrain, boolean enabled) {
         this.drivetrain = drivetrain;
@@ -491,7 +492,7 @@ public class VisionManager {
                 .withSize(4, 1)
                 .getEntry();
 
-        seedCameraEntry = tab.add("Seed Camera", "")
+        /*seedCameraEntry = tab.add("Seed Camera", "")
                 .withPosition(0, 1)
                 .withSize(2, 1)
                 .getEntry();
@@ -524,7 +525,7 @@ public class VisionManager {
         seedYawEntry = tab.add("Seed Yaw", 0.0)
                 .withPosition(2, 2)
                 .withSize(1, 1)
-                .getEntry();
+                .getEntry();*/
 
         for (int index = 0; index < cameras.size(); index++) {
             cameras.get(index).initializeShuffleboard(tab, index);
@@ -601,7 +602,7 @@ public class VisionManager {
      //   drivetrain.getState().Pose.getTranslation().getDistance(estimate.pose.getTranslation()) : -1.0);
     }
 
-    private void publishSeedDetails(
+    /*private void publishSeedDetails(
             SeedCandidate candidate,
             double yawDegrees) {
 
@@ -619,7 +620,7 @@ public class VisionManager {
         SmartDashboard.putString(
                 "Vision/Seed/Camera",
                 candidate.camera.name);
-    }
+    }*/
 
     private void publishSeedStatus(String status) {
         if (seededEntry != null) {

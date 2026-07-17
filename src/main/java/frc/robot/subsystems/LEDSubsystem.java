@@ -41,9 +41,9 @@ public class LEDSubsystem extends SubsystemBase {
             .withFrameRate(Units.Hertz.of(25));
 
     // Vision status uses only the eight onboard LEDs (indices 0-7).
-    private final ColorFlowAnimation m_visionNotSeededAnimation = createVisionAnimation(kRed);
+    /*private final ColorFlowAnimation m_visionNotSeededAnimation = createVisionAnimation(kRed);
     private final ColorFlowAnimation m_visionSeekingMt2Animation = createVisionAnimation(kYellow);
-    private final ColorFlowAnimation m_visionLockedAnimation = createVisionAnimation(kGreen);
+    private final ColorFlowAnimation m_visionLockedAnimation = createVisionAnimation(kGreen);*/
     private VisionStatus m_lastVisionStatus = null;
 
     private final SolidColor[] m_colors = new SolidColor[] {
@@ -57,27 +57,26 @@ public class LEDSubsystem extends SubsystemBase {
     // private static final int kCountdownSeconds = 30;
     private int countdownDuration = 30; // default, can be set when starting countdown
 
-    private boolean running = false;
-
+    /*private boolean running = false;
     private int lastDisplayedRemaining = -1;
     private int lastLitCount = 0;
-    private ColorZone lastColorZone = null;
+    private ColorZone lastColorZone = null;*/
 
     private final SolidColor solidRequest = new SolidColor(kStripStartIndex, kStripEndIndex).withUpdateFreqHz(0);
 
-    private enum ColorZone {
+    /*private enum ColorZone {
         GREEN,
         YELLOW,
         RED
-    }
+    }*/
 
-    private ColorFlowAnimation createVisionAnimation(RGBWColor color) {
+    /*private ColorFlowAnimation createVisionAnimation(RGBWColor color) {
         return new ColorFlowAnimation(kStripStartIndex, kStripLedCount)
                 .withSlot(0)
                 .withColor(color)
                 .withDirection(AnimationDirectionValue.Forward)
                 .withFrameRate(Units.Hertz.of(2));
-    }
+    }*/
 
     public void setVisionStatus(VisionStatus status) {
        
@@ -125,7 +124,7 @@ public class LEDSubsystem extends SubsystemBase {
         clearTimerStrip();
     }
 
-    public void startCountdown(int duration) {
+    /*public void startCountdown(int duration) {
         timer.reset();
         timer.start();
         running = true;
@@ -156,7 +155,7 @@ public class LEDSubsystem extends SubsystemBase {
         lastDisplayedRemaining = -1;
         lastLitCount = 0;
         lastColorZone = null;
-    }
+    }*/
 
     /*public void periodic() {
         if (!running) {
@@ -222,7 +221,7 @@ public class LEDSubsystem extends SubsystemBase {
         return Math.max(0, countdownDuration - (int) timer.get());
     }
 
-    private int getLitCountForRemaining(int remaining) {
+    /*private int getLitCountForRemaining(int remaining) {
         int litCount = (int) Math.ceil((remaining / (double) countdownDuration) * kStripLedCount);
         return Math.max(0, Math.min(kStripLedCount, litCount));
     }
@@ -250,7 +249,7 @@ public class LEDSubsystem extends SubsystemBase {
             case YELLOW -> new RGBWColor(255, 255, 0, 0);
             case RED -> new RGBWColor(255, 0, 0, 0);
         };
-    }
+    }*/
 
     private void setRange(int startInclusive, int endInclusive, RGBWColor color) {
         if (startInclusive > endInclusive) {
