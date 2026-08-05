@@ -19,7 +19,8 @@ public class Constants {
     }
 
 
-    public static final boolean kVerboseDashboard = false;
+    public static final boolean kVerboseDashboard = true;
+    public static final boolean kVerboseDashboardBeta = true;
     public static final double kWarmupSeconds = 4.0;
     public static final double kMaxSpeed = 1.0;
 
@@ -41,11 +42,11 @@ public class Constants {
         public static final int kPivotCurrentLimit = 30;
         public static final int kPivotStatorCurrentLimit = 60;
         public static final double kPivotStowed = 0;
-        public static final double kPivotDeployed = -21.316;//-21.6875;
-        public static final double kPivotAgitate = -15.650;//-7.886;
+        public static final double kPivotDeployed = -21.316;
+        public static final double kPivotAgitate = -13.6;//-15.650;
 
         public static final int kRollerIntakeMotorId = 12;
-        public static final int kSpeed = -4000;
+        public static final int kSpeed = -5000; //-5000;
         public static final int kRollerCurrentLimit =40;
 
         public static final int kAbsEncoderId = 45;

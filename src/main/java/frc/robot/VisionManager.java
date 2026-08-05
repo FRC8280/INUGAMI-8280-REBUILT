@@ -433,9 +433,9 @@ public class VisionManager {
         double translationError = currentPose.getTranslation()
                 .getDistance(estimate.pose.getTranslation());
 
-        if (translationError > MAX_VISION_TRANSLATION_ERROR_METERS) {
+        /*if (translationError > MAX_VISION_TRANSLATION_ERROR_METERS) {
             return "Pose jump too large";
-        }
+        }*/
 
         return null;
     }

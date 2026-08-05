@@ -62,7 +62,7 @@ public class Intake extends SubsystemBase {
 
         Slot0Configs intakeGains = PivotConfigs.Slot0;
         intakeGains.kG = 0.01;//0.1; // Add 0.5 V output to overcome gravity at the pivot's center of mass
-        intakeGains.kP = 0.75;//27.5;//20 // A position error of 2.5 rotations results in 12 V output
+        intakeGains.kP = 1;//0.75;//27.5;//20 // A position error of 2.5 rotations results in 12 V output
         intakeGains.kI = 0; // no output for integrated error
         intakeGains.kD = 0.1; //2; // A velocity error of 1 rps results in 0.1 V output
 

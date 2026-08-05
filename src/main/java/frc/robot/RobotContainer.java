@@ -40,6 +40,8 @@ import edu.wpi.first.wpilibj.Timer;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
+import frc.robot.Constants.EmergencyOperatorControls;
+import frc.robot.Constants.ShooterConstants;
 import frc.robot.commands.Swerve.DriveToTargetDropIn;
 //import dev.doglog.DogLog;
 //import dev.doglog.DogLogOptions;
@@ -117,7 +119,7 @@ public class RobotContainer {
     private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-    //private final Telemetry logger = new Telemetry(MaxSpeed);
+    // private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController driver = new CommandXboxController(0);
     private final Joystick operatorEmergency = new Joystick(1);
@@ -291,14 +293,18 @@ public class RobotContainer {
     }
 
     public void CeaseFire() {
-        
+
         m_Shooter.stopOverride();
+        m_Shooter.disableManualShot();
         if (passingZone != PassingZone.NOT_PASSING)
             return;
 
         fIsAutoAiming = false;
 
         // Todo stop any auto aiming system
+       // m_warmupTimer.stop();
+//m_warmupTimer.reset();
+
         m_intakeCycleTimer.stop();
         m_intakeDeployTimer.stop();
 
@@ -309,6 +315,7 @@ public class RobotContainer {
         m_warmupTimer.stop();
         // m_alignmentState = AlignmentState.IDLE;
         m_Intake.deployIntake();
+
     }
 
     // PID for auto-aim rotational control (radians)
@@ -473,7 +480,7 @@ public class RobotContainer {
     }
 
     public void startTeleopTimer() {
-        //getLEDSystem().startCountdown(10);
+        // getLEDSystem().startCountdown(10);
         teleopTimer.stop();
         teleopTimer.reset();
         teleopTimer.start();
@@ -485,7 +492,8 @@ public class RobotContainer {
     }
 
     private void onTransitionChange(int eventNumber, int timeSeconds) {
-        //ledSystem.startCountdown(timeSeconds); // Start a 15-second countdown on the LEDs
+        // ledSystem.startCountdown(timeSeconds); // Start a 15-second countdown on the
+        // LEDs
 
         System.out.println("Teleop event " + eventNumber + " fired at " + timeSeconds + " seconds");
     }
@@ -510,23 +518,6 @@ public class RobotContainer {
                                 .withRotationalRate(-driver.getRightX() * MaxAngularRate);
                     }
                 }));
-
-        // Original drive code
-        /*
-         * drivetrain.setDefaultCommand(
-         * // Drivetrain will execute this command periodically
-         * drivetrain.applyRequest(() -> {
-         * // translational drive from left stick (unchanged)
-         * double vx = -driver.getLeftY() * MaxSpeed * driveScaler;
-         * double vy = -driver.getLeftX() * MaxSpeed * driveScaler;
-         * 
-         * // default manual rotational control from right stick
-         * double rotationalRate = -driver.getRightX() * MaxAngularRate;
-         * return drive.withVelocityX(vx)
-         * .withVelocityY(vy)
-         * .withRotationalRate(rotationalRate);
-         * }));
-         */
 
         // If driver takes manual rotational control (right stick > 0.5) disable
         // auto-aim.
@@ -560,16 +551,7 @@ public class RobotContainer {
         driver.leftBumper().whileTrue(new DriveToTargetDropIn(drivetrain, () -> drivetrain.getPose2d(),
                 () -> DriverStation.getAlliance().get(), "LeftBump"));
 
-        // emergency servo reset
-        // driver.povUp().onTrue(new InstantCommand(() -> m_Shooter.SetHood(15)));
-        // driver.povDown().onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
-
         // Firing logic
-
-        /*
-         * new Trigger (() -> m_Shooter.IsIdle())
-         * .onTrue(new InstantCommand(() -> m_Shooter.SetHood(0)));
-         */
 
         new Trigger(() -> ReadyToFire())
                 .onTrue(new InstantCommand(() -> {
@@ -582,15 +564,6 @@ public class RobotContainer {
                 })); // activate the indexer once the shooter is warmed up and ready to fire.
 
         // intake logic
-        /*
-         * driver.x().onTrue(new InstantCommand(() -> toggleIntake()));
-         * driver.a().whileTrue((new InstantCommand(() -> m_Intake.startIntake())));
-         * driver.a().onFalse((new InstantCommand(() -> m_Intake.stopIntake())));
-         */
-
-        // Aiming logic
-        // driver.y().onTrue(new InstantCommand(() ->
-        // ActivateAutoAim(m_Shooter.GetAllianceHub())));
 
         // Phase transitions
         // Todo: implement warm up sequence on shooter based on phase
@@ -610,8 +583,6 @@ public class RobotContainer {
                 .onTrue(Commands.runOnce(() -> onTransitionChange(4, 30)));
 
         // Fire once at 130 seconds
-        // new Trigger(() -> teleopTimer.hasElapsed(130.0))
-        // .onTrue(Commands.runOnce(() -> onTransitionChange(5, 130)));
 
         // ***********************************************operator
         // controls********************************************************
@@ -628,10 +599,55 @@ public class RobotContainer {
                 Constants.StandardOperatorControls.ShootFuel);
         shootFuelButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
                 .alongWith(new InstantCommand(() -> ActivateAutoAim(m_Shooter.GetAllianceHub()))));
+
         shootFuelButton.onFalse(new InstantCommand(() -> {
             CeaseFire();
-            // m_Shooter.SetHood(Constants.ShooterConstants.kShooterDefaultAngle);
         }));
+
+        JoystickButton manualCloseButton = new JoystickButton(operatorEmergency,
+                Constants.EmergencyOperatorControls.ErrorCorrectionClose);
+        manualCloseButton.whileTrue(new InstantCommand(() -> {
+            m_Shooter.enableManualShot(2500, 70);
+            StartFiringSequence();
+        }));
+
+        manualCloseButton.onFalse(new InstantCommand(() -> {
+            m_Shooter.disableManualShot();
+            CeaseFire();
+        }));
+
+
+        JoystickButton manualFarButton = new JoystickButton(operatorEmergency,
+                Constants.EmergencyOperatorControls.ErrorCorrectionFar);
+        manualFarButton.whileTrue(new InstantCommand(() -> {
+            m_Shooter.enableManualShot(3500, 45);
+            StartFiringSequence();
+        }));
+
+        manualFarButton.onFalse(new InstantCommand(() -> {
+            m_Shooter.disableManualShot();
+            CeaseFire();
+        }));
+        /*
+         * JoystickButton manualCloseButton = new JoystickButton(operatorEmergency,
+         * Constants.EmergencyOperatorControls.ErrorCorrectionClose);
+         * manualCloseButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
+         * .alongWith(new InstantCommand(() -> m_Shooter.setShooterVelocity(2500))));
+         * 
+         * manualCloseButton.onFalse(new InstantCommand(() -> {
+         * CeaseFire();
+         * }));
+         * 
+         * JoystickButton manualFarButton = new JoystickButton(operatorEmergency,
+         * Constants.EmergencyOperatorControls.ErrorCorrectionFar);
+         * manualFarButton.whileTrue(new InstantCommand(() -> StartFiringSequence())
+         * .alongWith(new InstantCommand(() -> m_Shooter.setShooterVelocity(3500)))
+         * .alongWith(new InstantCommand(() -> m_Shooter.m_Hood.setAngle(45.0))));
+         * 
+         * manualFarButton.onFalse(new InstantCommand(() -> {
+         * CeaseFire();
+         * }));
+         */
 
         // While the shooter is firing, periodically bring the intake up to feed,
         // then stow it after a short deploy duration. Stops when shooter stops firing.
@@ -675,9 +691,13 @@ public class RobotContainer {
                     m_intakeDeployTimer.stop();
                 }));
 
-        new Trigger(() -> m_Shooter.hoodIsUp())
-                .onTrue(new InstantCommand(() -> driver.getHID().setRumble(RumbleType.kBothRumble, 1)))
-                .onFalse(new InstantCommand(() -> driver.getHID().setRumble(RumbleType.kBothRumble, 0)));
+        /*
+         * new Trigger(() -> m_Shooter.hoodIsUp())
+         * .onTrue(new InstantCommand(() ->
+         * driver.getHID().setRumble(RumbleType.kBothRumble, 1)))
+         * .onFalse(new InstantCommand(() ->
+         * driver.getHID().setRumble(RumbleType.kBothRumble, 0)));
+         */
 
         JoystickButton abortButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.OperatorAbort);
@@ -725,16 +745,6 @@ public class RobotContainer {
         hoodLow.onFalse(new InstantCommand(() -> {
             CeaseFire();
         }));
-
-        /*
-         * JoystickButton hoodMid = new JoystickButton(operatorStandard,
-         * Constants.StandardOperatorControls.HoodMid);
-         * hoodMid.onTrue(new InstantCommand(() -> m_Shooter.SetHood(45)));
-         * 
-         * JoystickButton hoodHigh = new JoystickButton(operatorStandard,
-         * Constants.StandardOperatorControls.HoodHigh);
-         * hoodHigh.onTrue(new InstantCommand(() -> m_Shooter.SetHood(30)));
-         */
 
         JoystickButton warmUpButton = new JoystickButton(operatorEmergency,
                 Constants.EmergencyOperatorControls.WarmupShooter);

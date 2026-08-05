@@ -62,7 +62,7 @@ public class Robot extends TimedRobot {
         var pose = m_robotContainer.drivetrain.getState().Pose;
         m_field.setRobotPose(pose);
 
-        if (Constants.kVerboseDashboard) {
+        if (Constants.kVerboseDashboardBeta) {
             SmartDashboard.putNumber(
                     "Current Drive X",
                     pose.getX());

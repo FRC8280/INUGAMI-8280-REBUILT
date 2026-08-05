@@ -85,13 +85,17 @@ public class Shooter extends SubsystemBase {
     ServoHubConfig config;
     public final HoodSystem m_Hood;
     private final NeutralOut neutralOut = new NeutralOut();
-    //private final Supplier<LEDSubsystem> m_ledSupplier;
+    // private final Supplier<LEDSubsystem> m_ledSupplier;
     private double lastLoopTime = Timer.getFPGATimestamp();
+
+    private boolean manualShotOverride = false;
+    private double manualTargetRPM = 0.0;
+    private double manualHoodDeg = 0.0;
 
     public Shooter(Supplier<Pose2d> robotPoseSupplier, Supplier<LEDSubsystem> ledSupplier) {
 
         m_robotPoseSupplier = robotPoseSupplier;
-       // m_ledSupplier = ledSupplier;
+        // m_ledSupplier = ledSupplier;
 
         m_Hood = new HoodSystem();
         m_ShooterLookup = new ShooterLookup();
@@ -185,6 +189,20 @@ public class Shooter extends SubsystemBase {
         return m_status == ShooterStatus.WARMUP;
     }
 
+    public void enableManualShot(double rpm, double hoodDeg) {
+        manualShotOverride = true;
+        manualTargetRPM = rpm;
+        manualHoodDeg = hoodDeg;
+
+        m_shooterTargetRPM = rpm;
+        setShooterVelocity(rpm);
+        m_Hood.setAngle(hoodDeg);
+    }
+
+    public void disableManualShot() {
+        manualShotOverride = false;
+    }
+
     public boolean IsReadyToFire() {
         return m_status == ShooterStatus.FIRING;
     }
@@ -219,7 +237,7 @@ public class Shooter extends SubsystemBase {
     public void WarmupShooter() {
         setStatus(ShooterStatus.WARMUP);
         setShooterVelocity(m_shooterTargetRPM);
-    SetPreShotVelocity(ShooterConstants.kPreShotRPM);
+        SetPreShotVelocity(ShooterConstants.kPreShotRPM);
 
         m_warmupTimer.reset();
         m_warmupTimer.start();
@@ -390,7 +408,6 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/PassingHoodDeg", hoodDeg);
     }
 
-
     /** Disable passing override and resume normal automatic setpoint selection. */
     public void disablePassingMode() {
         fPassing = false;
@@ -400,11 +417,11 @@ public class Shooter extends SubsystemBase {
     private boolean runThisCycle = false;
     public boolean hoodOverride = false;
 
-    public void startOverride(){
+    public void startOverride() {
         hoodOverride = true;
     }
 
-    public void stopOverride(){
+    public void stopOverride() {
         hoodOverride = false;
     }
 
@@ -422,21 +439,22 @@ public class Shooter extends SubsystemBase {
         double hoodActuatorAngle = ShooterConstants.kShooterDefaultAngle;
 
         rangeMeters = distanceToAllianceHub();
-         if(hoodOverride) 
-        {
+        if (hoodOverride) {
             rangeMeters = 3.0;
         }
-        if (fPassing) {
+        if (manualShotOverride) {
+            m_shooterTargetRPM = manualTargetRPM;
+            targetAngle = manualHoodDeg;
+        } else if (fPassing) {
             // Use fixed passing setpoints when in passing mode
             m_shooterTargetRPM = m_passingTargetRPM;
             targetAngle = m_passingHoodDeg;
-        } 
-        else {
+        } else {
             ShooterLookup.ShooterSetpoint sp = m_ShooterLookup.getSetpoint(rangeMeters);
             m_shooterTargetRPM = sp.rpm();
             targetAngle = sp.hoodDeg();
         }
-        hoodActuatorAngle =  targetAngle;
+        hoodActuatorAngle = targetAngle;
 
         double shooterActualRPM = m_ShooterMotorLeft0.getVelocity().getValueAsDouble() * 60.0;
         double acceleratorActualRPM = m_AccelerateMotor.getVelocity().getValueAsDouble() * 60.0;
@@ -454,9 +472,9 @@ public class Shooter extends SubsystemBase {
 
         } else if (m_status == ShooterStatus.WARMUP) {
 
-            //if (isInOwnAllianceZone()) {
-                m_Hood.setAngle(hoodActuatorAngle);
-            //}
+            // if (isInOwnAllianceZone()) {
+            m_Hood.setAngle(hoodActuatorAngle);
+            // }
 
             double elapsed = m_warmupTimer.get();
             if (elapsed >= ShooterConstants.kWarmupSeconds) {
@@ -478,19 +496,21 @@ public class Shooter extends SubsystemBase {
             return;
         }
 
-        /*m_lineOfSite = canSeeAllianceTag("limelight");
-
-
-        // todo add case for limelight-rear
-       if (m_lineOfSite) {
-            if (rangeMeters > 3 && rangeMeters < 3.5) {
-                m_ledSupplier.get().setYellow(false);
-            } else if (rangeMeters < 3) {
-                m_ledSupplier.get().setGreen(false);
-            }
-        } else {
-            m_ledSupplier.get().setRed(false);
-        } */ 
+        /*
+         * m_lineOfSite = canSeeAllianceTag("limelight");
+         * 
+         * 
+         * // todo add case for limelight-rear
+         * if (m_lineOfSite) {
+         * if (rangeMeters > 3 && rangeMeters < 3.5) {
+         * m_ledSupplier.get().setYellow(false);
+         * } else if (rangeMeters < 3) {
+         * m_ledSupplier.get().setGreen(false);
+         * }
+         * } else {
+         * m_ledSupplier.get().setRed(false);
+         * }
+         */
 
         SmartDashboard.putBoolean("Shooter/Hood up", hoodIsUp());
         SmartDashboard.putNumber("Shooter/Hood  Angle", m_Hood.getCommandedAngleDeg());
@@ -534,8 +554,8 @@ public class Shooter extends SubsystemBase {
             return ShooterConstants.kBlueRightPass;
     }
 
-    public boolean hoodIsUp(){
-        if(m_Hood.getCommandedAngleDeg() != ShooterConstants.kHoodMaxDeg)
+    public boolean hoodIsUp() {
+        if (m_Hood.getCommandedAngleDeg() != ShooterConstants.kHoodMaxDeg)
             return true;
         else
             return false;
